@@ -23,50 +23,54 @@ def fetch_price_history(company):
 
 def predict_future_prices(request, id):
     try:
+        # Fetch company and price history based on the company ID
         company = CompanyProfile.objects.get(id=id)
         prices = PriceHistory.objects.filter(company=company).order_by('date')
 
+        # If there is no price history available for the company
         if not prices.exists():
             return JsonResponse({'message': 'No price history available for prediction.'}, status=400)
 
-        # Prepare the DataFrame
+        # Convert price history into a Pandas DataFrame
         df = pd.DataFrame(list(prices.values('date', 'close_price')))
+        
+        # Ensure the date column is set as the index and convert it to datetime
+        df['date'] = pd.to_datetime(df['date'])
         df.set_index('date', inplace=True)
-        df.index = pd.to_datetime(df.index)
-        df = df.asfreq('D')  # Make sure we have daily frequency
-        df['close_price'] = df['close_price'].ffill()
 
+        # Set a daily frequency and forward fill missing data
+        df = df.asfreq('D', method='ffill')
 
-        # Convert close_price to float
+        # Convert close_price to numeric and drop any invalid rows (NaN after conversion)
         df['close_price'] = pd.to_numeric(df['close_price'], errors='coerce')
+        df = df.dropna(subset=['close_price'])  # Drop rows where 'close_price' is NaN
 
-        # Drop rows where close_price is NaN (because invalid)
-        df = df.dropna(subset=['close_price'])
-
-        # If still any missing dates after making it daily frequency
-        df['close_price'] = df['close_price'].ffill()
-
-
+        # If not enough data to make a prediction, return an error message
         if len(df) < 10:
-            return JsonResponse({'message': 'Not enough data to make a prediction.'}, status=400)
+            return JsonResponse({'message': 'Not enough data to make a prediction. Need at least 10 data points.'}, status=400)
 
-        # Fit ARIMA model
-        model = ARIMA(df['close_price'], order=(5,1,0))
+        # Fit the ARIMA model (you can adjust the order depending on your data)
+        model = ARIMA(df['close_price'], order=(5, 1, 0))  # Example: ARIMA(5,1,0)
         model_fit = model.fit()
 
-        # Forecast next 5 days
+        # Forecast the next 5 days
         forecast = model_fit.forecast(steps=5)
+
+        # Generate future dates for the forecast
         last_date = df.index[-1]
         future_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=5, freq='D')
 
+        # Prepare the forecast result
         forecast_result = [
-            {"date": future_dates[i].strftime('%Y-%m-%d'), "predicted_close_price": float(forecast.iloc[i])}
+            {"date": future_dates[i].strftime('%Y-%m-%d'), "predicted_close_price": round(float(forecast[i]), 2)}
             for i in range(5)
         ]
 
+        # Return the result as a JSON response
         return JsonResponse({'predictions': forecast_result})
 
     except Exception as e:
+        # Handle any unexpected exceptions
         return JsonResponse({'message': f'Error occurred while forecasting: {str(e)}'}, status=500)
 
 def home(request):
