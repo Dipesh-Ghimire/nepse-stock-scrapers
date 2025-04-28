@@ -29,7 +29,7 @@ class CompanyNews(models.Model):
 
 class PriceHistory(models.Model):
     company = models.ForeignKey(CompanyProfile, on_delete=models.CASCADE)
-    date = models.DateField(unique=True)
+    date = models.DateField()
     open_price = models.DecimalField(max_digits=10, decimal_places=2)
     high_price = models.DecimalField(max_digits=10, decimal_places=2)
     low_price = models.DecimalField(max_digits=10, decimal_places=2)
