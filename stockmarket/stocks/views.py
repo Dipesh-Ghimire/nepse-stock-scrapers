@@ -62,7 +62,7 @@ def predict_future_prices(request, id):
 
         # Prepare the forecast result
         forecast_result = [
-            {"date": future_dates[i].strftime('%Y-%m-%d'), "predicted_close_price": round(float(forecast[i]), 2)}
+            {"date": future_dates[i].strftime('%Y-%m-%d'), "predicted_close_price": round(float(forecast.iloc[i]), 2)}
             for i in range(5)
         ]
 
