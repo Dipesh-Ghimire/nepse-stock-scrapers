@@ -1,3 +1,6 @@
 from django.contrib import admin
+from .models import CompanyProfile, CompanyNews, PriceHistory
 
-# Register your models here.
+admin.site.register(CompanyProfile)
+admin.site.register(CompanyNews)
+admin.site.register(PriceHistory)
