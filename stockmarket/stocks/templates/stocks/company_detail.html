@@ -1,0 +1,80 @@
+{% extends 'base_generic.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h1>{{ company.name }}</h1>
+            <p><strong>Symbol:</strong> {{ company.symbol }}</p>
+            <p><strong>Sector:</strong> {{ company.sector }}</p>
+            <p><strong>Address:</strong> {{ company.address }}</p>
+            <p><strong>Website:</strong> <a href="{{ company.website }}" target="_blank">{{ company.website }}</a></p>
+            <p><strong>Listed Date:</strong> {{ company.listed_date }}</p>
+            <p><strong>Paid-up Capital:</strong> {{ company.paidup_capital }}</p>
+            <p><strong>Listed Shares:</strong> {{ company.listed_shares }}</p>
+            <p><strong>Market Capitalization:</strong> {{ company.market_capitalization }}</p>
+            <p><strong>Description:</strong></p>
+            <p>{{ company.description }}</p>
+
+            <!-- Price History Button -->
+            <a href="{% url 'price_history' company.id %}" class="btn btn-primary mt-3">
+                View Price History
+            </a>
+
+            <!-- Scrape Price History Button -->
+        <div class="mt-4">
+            <button id="scrape-button" class="btn btn-primary">Scrape Latest Prices</button>
+
+        <!-- Result Message -->
+        <div id="scrape-result" class="mt-3" style="font-weight: bold;"></div>
+
+        <!-- The Predict Button -->
+<button id="predict-button">Predict Future Prices</button>
+
+<div id="result">
+    <!-- This is where the result will be displayed after scraping or prediction -->
+</div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function(){
+    $('#scrape-button').click(function(){
+        $.ajax({
+            url: '{% url "scrape_company_prices" company.id %}',  // Uses company id dynamically
+            method: 'GET',
+            success: function(response) {
+                $('#scrape-result').html(response.message);  // Success message
+            },
+            error: function(error) {
+                $('#scrape-result').html('Error occurred while scraping.');
+            }
+        });
+    });
+});
+
+// Predict Future Prices Button Click
+$('#predict-button').click(function(){
+    $.ajax({
+        url: '/predict-future-prices/{{ company.id }}/',  // Notice: passing company.id
+        method: 'GET',
+        success: function(response) {
+            let predictions = response.predictions.map(function(prediction) {
+                return `Date: ${prediction.date}, Predicted Price: ${prediction.predicted_close_price}`;
+            }).join('<br>');
+            $('#result').html(predictions);
+        },
+        error: function(xhr, status, error) {
+            console.log(xhr.responseText);  // This shows the Django error message!
+            $('#result').html('Error occurred: ' + xhr.responseText);
+        }
+        
+    });
+});
+
+</script>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

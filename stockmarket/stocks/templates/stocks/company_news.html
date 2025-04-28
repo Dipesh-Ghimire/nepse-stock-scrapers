@@ -1,0 +1,24 @@
+{% extends 'base_generic.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>{{ company.name }} - Latest News</h1>
+
+    {% if company_news %}
+    <div class="list-group">
+        {% for news in company_news %}
+        <div class="list-group-item">
+            <h5>{{ news.news_title }}</h5>
+            <p><strong>News Date:</strong> {{ news.news_date }}</p>
+            {% if news.news_image %}
+            <img src="{{ news.news_image }}" alt="News Image" class="img-fluid mb-3">
+            {% endif %}
+            <p>{{ news.news_body }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>No news available for this company.</p>
+    {% endif %}
+</div>
+{% endblock %}

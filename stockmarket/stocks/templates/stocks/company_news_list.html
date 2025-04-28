@@ -1,0 +1,22 @@
+{% extends 'base_generic.html' %}
+
+{% block title %}Company News{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Company News</h1>
+
+<div class="list-group">
+    {% for article in news %}
+    <a href="{% url 'company_news' article.id %}" class="list-group-item list-group-item-action">
+        <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">{{ article.news_title }}</h5>
+            <small>{{ article.news_date }}</small>
+        </div>
+        <p class="mb-1">{{ article.news_body|truncatechars:150 }}</p>
+    </a>
+    {% empty %}
+    <p>No news articles available.</p>
+    {% endfor %}
+</div>
+
+{% endblock %}

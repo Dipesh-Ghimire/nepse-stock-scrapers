@@ -3,81 +3,107 @@ from statsmodels.tsa.arima.model import ARIMA
 from django.shortcuts import render
 from django.http import JsonResponse
 
-from .scrapers.scrape_sarbottam_prices import scrape_sarbottam_prices
-from .models import PriceHistory
+from .models import CompanyNews, CompanyProfile, PriceHistory
+from .scrapers.scrape_prices import scrape_company_price_history
 
-import pandas as pd
 from statsmodels.tsa.arima.model import ARIMA
 from django.http import JsonResponse
-from .models import PriceHistory
+import pandas as pd
 
-def fetch_price_history():
-    # Fetch the last 20 price history records from the database
-    price_data = PriceHistory.objects.all().order_by('-date')[:20]
-    
-    # Prepare the data for ARIMA (date and close_price)
-    data = pd.DataFrame(list(price_data.values('date', 'close_price')))
-    data['date'] = pd.to_datetime(data['date'])
-    data = data.set_index('date')
-    
-    # Sort the data by date and set frequency to daily (asfreq)
-    data = data.sort_index()
-    data = data.asfreq('D')  # This ensures a daily frequency for the time series
-    
-    # Ensure close_price is numeric, forcing errors to NaN
-    data['close_price'] = pd.to_numeric(data['close_price'], errors='coerce')
-    
-    # Drop rows with NaN values (if any) in 'close_price'
-    data = data.dropna(subset=['close_price'])
+def fetch_price_history(company):
+    # Fetch PriceHistory records for this specific company
+    qs = PriceHistory.objects.filter(company=company).order_by('date')
+
+    # Convert QuerySet to DataFrame
+    data = pd.DataFrame.from_records(qs.values('date', 'close_price'))
+    data.set_index('date', inplace=True)
     
     return data
 
-def predict_future_prices(request):
-    # Step 1: Fetch historical data
-    data = fetch_price_history()
-    
-    if len(data) < 2:  # Ensure we have enough data for ARIMA
-        return JsonResponse({'message': 'Not enough data for prediction. Need at least 2 data points.'}, status=400)
-    
-    # Step 2: Fit an ARIMA model
-    try:
-        # Log the data we're passing to ARIMA
-        print("Using the following data for ARIMA model:")
-        print(data.head())  # Log the first few rows of the data
-        
-        # Fit the ARIMA model
-        model = ARIMA(data['close_price'], order=(5, 1, 0))
-        model_fit = model.fit()
-        
-        # Log the model summary
-        print("ARIMA Model Summary:")
-        print(model_fit.summary())
 
-        # Step 3: Forecast the next 5 days
+def predict_future_prices(request, id):
+    try:
+        company = CompanyProfile.objects.get(id=id)
+        prices = PriceHistory.objects.filter(company=company).order_by('date')
+
+        if not prices.exists():
+            return JsonResponse({'message': 'No price history available for prediction.'}, status=400)
+
+        # Prepare the DataFrame
+        df = pd.DataFrame(list(prices.values('date', 'close_price')))
+        df.set_index('date', inplace=True)
+        df.index = pd.to_datetime(df.index)
+        df = df.asfreq('D')  # Make sure we have daily frequency
+        df['close_price'] = df['close_price'].ffill()
+
+
+        # Convert close_price to float
+        df['close_price'] = pd.to_numeric(df['close_price'], errors='coerce')
+
+        # Drop rows where close_price is NaN (because invalid)
+        df = df.dropna(subset=['close_price'])
+
+        # If still any missing dates after making it daily frequency
+        df['close_price'] = df['close_price'].ffill()
+
+
+        if len(df) < 10:
+            return JsonResponse({'message': 'Not enough data to make a prediction.'}, status=400)
+
+        # Fit ARIMA model
+        model = ARIMA(df['close_price'], order=(5,1,0))
+        model_fit = model.fit()
+
+        # Forecast next 5 days
         forecast = model_fit.forecast(steps=5)
-        
-        # Prepare forecast dates (next 5 days)
-        future_dates = pd.date_range(start=data.index[-1] + pd.Timedelta(days=1), periods=5, freq='D')
-        
-        # Prepare forecasted results to return
-        forecast_result = [{"date": future_dates[i].strftime('%Y-%m-%d'), "predicted_close_price": forecast[i]} for i in range(5)]
-        
+        last_date = df.index[-1]
+        future_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=5, freq='D')
+
+        forecast_result = [
+            {"date": future_dates[i].strftime('%Y-%m-%d'), "predicted_close_price": float(forecast[i])}
+            for i in range(5)
+        ]
+
         return JsonResponse({'predictions': forecast_result})
-    
+
     except Exception as e:
-        # Log any exceptions
-        print(f"Error occurred: {str(e)}")
         return JsonResponse({'message': f'Error occurred while forecasting: {str(e)}'}, status=500)
 
-def scrape_button(request):
-    return render(request, 'stocks/scrape_button.html')
+def home(request):
+    return render(request, 'stocks/home.html')
 
-def scrape_prices(request):
+def company_detail(request, id):
+    company = CompanyProfile.objects.get(id=id)
+    return render(request, 'stocks/company_detail.html', {'company': company})
+
+def company_news(request, id):
+    company = CompanyProfile.objects.get(id=id)
+    company_news = CompanyNews.objects.filter(company=company)
+    return render(request, 'stocks/company_news.html', {'company': company, 'company_news': company_news})
+
+def price_history(request, id):
+    company = CompanyProfile.objects.get(id=id)
+    price_history = PriceHistory.objects.filter(company=company)
+    return render(request, 'stocks/price_history.html', {'company': company, 'price_history': price_history})
+
+def price_history_list(request):
+    prices = PriceHistory.objects.select_related('company').order_by('-date')
+    return render(request, 'stocks/price_history_list.html', {'prices': prices})
+
+def company_list(request):
+    companies = CompanyProfile.objects.all()
+    return render(request, 'stocks/company_list.html', {'companies': companies})
+
+def company_news_list(request):
+    news = CompanyNews.objects.all()
+    return render(request, 'stocks/company_news_list.html', {'news': news})
+
+def scrape_company_prices(request, id):
     try:
-        # Trigger scraping function
-        scrape_sarbottam_prices()
-
-        # Return a success message after scraping
-        return JsonResponse({'message': 'Prices scraped successfully!'})
+        company = CompanyProfile.objects.get(id=id)
+        scrape_company_price_history(company.symbol)  # Use the generalized scraper
+        return JsonResponse({'message': f"Successfully scraped prices for {company.name}."})
+    except CompanyProfile.DoesNotExist:
+        return JsonResponse({'message': 'Company not found.'}, status=404)
     except Exception as e:
         return JsonResponse({'message': f'Error occurred: {str(e)}'}, status=500)

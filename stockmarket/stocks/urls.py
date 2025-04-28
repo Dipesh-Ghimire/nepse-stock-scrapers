@@ -3,7 +3,15 @@ from . import views
 
 urlpatterns = [
     # Other URL patterns...
-    path('scrape/', views.scrape_button, name='scrape_button'),
-    path('scrape_prices/', views.scrape_prices, name='scrape_prices'),
-    path('predict_prices/', views.predict_future_prices, name='predict_future_prices'),  
+    path('', views.company_list, name='company_list'),
+    path('predict-future-prices/<int:id>/', views.predict_future_prices, name='predict_future_prices'),
+    
+    path('company/<int:id>/', views.company_detail, name='company_detail'),
+    path('company/<int:id>/news/', views.company_news, name='company_news'),
+
+    path('company/<int:id>/price-history/', views.price_history, name='price_history'),
+    path('news/', views.company_news_list, name='company_news_list'),
+    path('prices/', views.price_history_list, name='price_history_list'),
+
+    path('scrape-company/<int:id>/', views.scrape_company_prices, name='scrape_company_prices'),
 ]

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrape Prices - {{ company.name }}</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<h1>Scrape Price History for {{ company.name }} ({{ company.symbol }})</h1>
+
+<!-- Scrape Prices Button -->
+<button id="scrape-button">Scrape Prices</button>
+
+<!-- Result will be displayed here -->
+<div id="result" style="margin-top: 20px; font-weight: bold;"></div>
+
+<script>
+    $(document).ready(function(){
+        $('#scrape-button').click(function(){
+            $.ajax({
+                url: '{% url "scrape_company_prices" company.id %}',  // Dynamic URL
+                method: 'GET',
+                success: function(response) {
+                    $('#result').html(response.message);  // Message from Django view
+                },
+                error: function(error) {
+                    $('#result').html('Error occurred while scraping.');
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>
