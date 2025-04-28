@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrape Sarbottam Prices</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<h1>Click the Button to Scrape Sarbottam Prices</h1>
+
+<!-- The Scrape Button -->
+<button id="scrape-button">Scrape Prices</button>
+
+<h1>Click the Button to Predict Future Prices</h1>
+
+<!-- The Predict Button -->
+<button id="predict-button">Predict Future Prices</button>
+
+<div id="result">
+    <!-- This is where the result will be displayed after scraping or prediction -->
+</div>
+
+<script>
+    $(document).ready(function(){
+        // Scrape Prices Button Click
+        $('#scrape-button').click(function(){
+            $.ajax({
+                url: '{% url "scrape_prices" %}',  // URL for the view that triggers scraping
+                method: 'GET',
+                success: function(response) {
+                    $('#result').html(response.message);  // Show the message from the view
+                },
+                error: function(error) {
+                    $('#result').html('Error occurred while scraping.');
+                }
+            });
+        });
+
+        // Predict Future Prices Button Click
+        $('#predict-button').click(function(){
+            $.ajax({
+                url: '{% url "predict_future_prices" %}',  // URL for the view that triggers prediction
+                method: 'GET',
+                success: function(response) {
+                    // Display the predicted prices for the next 5 days
+                    let predictions = response.predictions.map(function(prediction) {
+                        return `Date: ${prediction.date}, Predicted Price: ${prediction.predicted_close_price}`;
+                    }).join('<br>');
+                    $('#result').html(predictions);  // Show predictions in the result div
+                },
+                error: function(error) {
+                    $('#result').html('Error occurred while predicting.');
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>
