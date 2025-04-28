@@ -60,7 +60,7 @@ def predict_future_prices(request, id):
         future_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=5, freq='D')
 
         forecast_result = [
-            {"date": future_dates[i].strftime('%Y-%m-%d'), "predicted_close_price": float(forecast[i])}
+            {"date": future_dates[i].strftime('%Y-%m-%d'), "predicted_close_price": float(forecast.iloc[i])}
             for i in range(5)
         ]
 
