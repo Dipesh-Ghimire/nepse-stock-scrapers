@@ -29,12 +29,16 @@ class CompanyNews(models.Model):
 
 class PriceHistory(models.Model):
     company = models.ForeignKey(CompanyProfile, on_delete=models.CASCADE)
-    date = models.DateField()
+    date = models.DateField(unique=True)
     open_price = models.DecimalField(max_digits=10, decimal_places=2)
     high_price = models.DecimalField(max_digits=10, decimal_places=2)
     low_price = models.DecimalField(max_digits=10, decimal_places=2)
     close_price = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['date', 'company'], name='unique_date_company')
+        ]
     def __str__(self):
         return f"{self.company.symbol} - {self.date}"
