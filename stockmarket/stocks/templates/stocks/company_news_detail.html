@@ -6,7 +6,7 @@
 <div class="container mt-4">
     <div class="card">
         {% if article.news_image %}
-        <img src="{{ article.news_image }}" class="card-img-top" alt="News Image">
+        <img src="{{ article.news_image }}" class="card-img-top img-fluid" alt="News Image" style="max-height: 300px; object-fit: cover;">
         {% endif %}
         <div class="card-body">
             <h3 class="card-title">{{ article.news_title }}</h3>
