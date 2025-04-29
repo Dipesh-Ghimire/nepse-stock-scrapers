@@ -3,7 +3,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
 
-from .forms import CompanyProfileForm
+from .forms import CompanyNewsForm, CompanyProfileForm
 
 from .models import CompanyNews, CompanyProfile, PriceHistory
 from .scrapers.scrape_prices import scrape_company_price_history
@@ -123,3 +123,17 @@ def company_create(request):
     else:
         form = CompanyProfileForm()
     return render(request, 'stocks/company_form.html', {'form': form})
+
+def add_company_news(request):
+    if request.method == 'POST':
+        form = CompanyNewsForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('company_news_list')  # Make sure you have this URL name
+    else:
+        form = CompanyNewsForm()
+    return render(request, 'stocks/company_news_form.html', {'form': form})
+
+def company_news_detail(request, news_id):
+    news_article = CompanyNews.objects.get(id=news_id)
+    return render(request, 'stocks/company_news_detail.html', {'article': news_article})
