@@ -1,7 +1,9 @@
 import pandas as pd
 from statsmodels.tsa.arima.model import ARIMA
-from django.shortcuts import render
+from django.shortcuts import render,redirect
 from django.http import JsonResponse
+
+from .forms import CompanyProfileForm
 
 from .models import CompanyNews, CompanyProfile, PriceHistory
 from .scrapers.scrape_prices import scrape_company_price_history
@@ -111,3 +113,13 @@ def scrape_company_prices(request, id):
         return JsonResponse({'message': 'Company not found.'}, status=404)
     except Exception as e:
         return JsonResponse({'message': f'Error occurred: {str(e)}'}, status=500)
+    
+def company_create(request):
+    if request.method == 'POST':
+        form = CompanyProfileForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('company_list')
+    else:
+        form = CompanyProfileForm()
+    return render(request, 'stocks/company_form.html', {'form': form})

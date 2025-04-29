@@ -2,13 +2,29 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1>Company List</h1>
-    <ul class="list-group">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Company List</h1>
+        <a href="{% url 'company_create' %}" class="btn btn-success">
+            + Add Company
+        </a>
+    </div>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
         {% for company in companies %}
-        <li class="list-group-item">
-            <a href="{% url 'company_detail' company.id %}">{{ company.name }}</a>
-        </li>
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <a href="{% url 'company_detail' company.id %}" class="text-decoration-none">
+                            {{ company.name }}
+                        </a>
+                    </h5>
+                    <p class="card-text mb-1"><strong>Symbol:</strong> {{ company.symbol }}</p>
+                    <p class="card-text mb-1"><strong>Sector:</strong> {{ company.sector }}</p>
+                    <p class="card-text mb-1"><strong>Address:</strong> {{ company.address }}</p>
+                </div>
+            </div>
+        </div>
         {% endfor %}
-    </ul>
+    </div>
 </div>
 {% endblock %}
