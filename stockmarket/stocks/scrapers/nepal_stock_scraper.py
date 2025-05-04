@@ -241,5 +241,18 @@ def main():
     finally:
         scraper.close()
 
+def scrape_company_price_history(symbol, max_pages=2, output_csv=False):
+    scraper = NepalStockScraper(headless=False)
+    try:
+        if scraper.search_company(symbol):
+            if scraper.click_price_history_tab():
+                scraper.scrape_all_pages(max_pages=max_pages)
+                if output_csv:
+                    scraper.save_to_csv(f"{symbol}_price_history.csv")
+                return scraper.price_history
+    finally:
+        scraper.close()
+    return []
+
 if __name__ == "__main__":
-    main()
+    print(scrape_company_price_history("SARBTM", max_pages=2, output_csv=False))
