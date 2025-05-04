@@ -128,3 +128,5 @@ import os
 
 STATIC_URL = '/static/' # below this add the following line
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+CHROMEDRIVER_PATH = os.path.join(BASE_DIR.parent, 'bin', 'chromedriver')
