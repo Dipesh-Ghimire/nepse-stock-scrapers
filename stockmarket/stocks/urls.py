@@ -19,4 +19,5 @@ urlpatterns = [
 
     path('scrape-company/<int:id>/', views.scrape_company_prices, name='scrape_company_prices'),
     path('scrape-company-nepstock/<int:id>/', views.scrape_price_nepstock, name='scrape_price_nepstock'),
+    path('scrape-company-merolagani/<int:id>/', views.scrape_merolagani_view, name='scrape_price_merolagani'),
 ]

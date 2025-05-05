@@ -43,6 +43,11 @@
                         Scrape Latest Prices from NepalStock
                     </button>
 
+                    <!-- Scrape Latest Prices Button -->
+                    <button id="scrape-merolagani" class="btn btn-success">
+                        Scrape Latest Prices from Merolagani
+                    </button>
+
                     <!-- Predict Future Prices Button -->
                     <button id="predict-button" class="btn btn-warning">
                         Predict Future Prices
@@ -78,6 +83,18 @@ $(document).ready(function(){
     $('#scrape-nepstock').click(function(){
         $.ajax({
             url: '{% url "scrape_price_nepstock" company.id %}',
+            method: 'GET',
+            success: function(response) {
+                $('#scrape-result').html(response.message);
+            },
+            error: function(error) {
+                $('#scrape-result').html('Error occurred while scraping.');
+            }
+        });
+    });
+    $('#scrape-merolagani').click(function(){
+        $.ajax({
+            url: '{% url "scrape_price_merolagani" company.id %}',
             method: 'GET',
             success: function(response) {
                 $('#scrape-result').html(response.message);

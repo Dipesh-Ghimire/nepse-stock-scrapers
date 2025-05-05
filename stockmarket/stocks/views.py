@@ -3,6 +3,8 @@ from statsmodels.tsa.arima.model import ARIMA
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
 
+from .scrapers.merolagani_scraper import MerolaganiStockScraper, save_price_history_to_db_ml
+
 from .forms import CompanyNewsForm, CompanyProfileForm
 
 from .models import CompanyNews, CompanyProfile, PriceHistory
@@ -133,7 +135,19 @@ def scrape_price_nepstock(request, id):
         })
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-    
+def scrape_merolagani_view(request, id):
+    symbol = CompanyProfile.objects.get(id=id).symbol
+    try:
+        scraper = MerolaganiStockScraper(symbol=symbol, headless=False)
+        data = scraper.fetch_price_history(max_records=20)
+        save_price_history_to_db_ml(symbol, data)
+        return JsonResponse({
+            "message": f"Scraped and saved {len(data)} records for {symbol}",
+            "records_saved": len(data)
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
 def company_create(request):
     if request.method == 'POST':
         form = CompanyProfileForm(request.POST)
