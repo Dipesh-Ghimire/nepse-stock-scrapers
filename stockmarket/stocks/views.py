@@ -118,8 +118,7 @@ def scrape_company_prices(request, id):
         return JsonResponse({'message': f'Error occurred: {str(e)}'}, status=500)
 def scrape_price_nepstock(request, id):
     """
-    View to scrape and store price history for a given symbol from NepalStock.
-    URL: /scrape-price-history/?symbol=XYZ
+    Scrape price history for a specific company using the NepStock scraper.
     """
     symbol = CompanyProfile.objects.get(id=id).symbol
     try:
@@ -129,8 +128,7 @@ def scrape_price_nepstock(request, id):
         print(f"Scraped {len(price_history_data)} records for {symbol}.")
         save_price_history_to_db(symbol, price_history_data)
         return JsonResponse({
-            'status': 'success',
-            'symbol': symbol,
+            "message": f"Scraped and saved {len(price_history_data)} records for {symbol}",
             'records_scraped': len(price_history_data)
         })
     except Exception as e:
@@ -138,7 +136,7 @@ def scrape_price_nepstock(request, id):
 def scrape_merolagani_view(request, id):
     symbol = CompanyProfile.objects.get(id=id).symbol
     try:
-        scraper = MerolaganiStockScraper(symbol=symbol, headless=False)
+        scraper = MerolaganiStockScraper(symbol=symbol, headless=True)
         data = scraper.fetch_price_history(max_records=20)
         save_price_history_to_db_ml(symbol, data)
         return JsonResponse({

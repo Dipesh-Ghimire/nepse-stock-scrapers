@@ -15,7 +15,7 @@ import logging
 logger = logging.getLogger('stocks')
 
 class MerolaganiStockScraper:
-    def __init__(self, symbol, headless=True, chromedriver_path=settings.CHROMEDRIVER_PATH):
+    def __init__(self, symbol, headless=False, chromedriver_path=settings.CHROMEDRIVER_PATH):
         self.symbol = symbol
         self.base_url = f"https://merolagani.com/CompanyDetail.aspx?symbol={symbol}"
         self.records = []
@@ -23,14 +23,13 @@ class MerolaganiStockScraper:
         self.chromedriver_path = chromedriver_path
         self.driver = self._init_driver(headless)
 
-    def _init_driver(self, headless):
+    def _init_driver(self, headless=False):
         options = Options()
         if headless:
-            options.add_argument('--headless')
+            options.add_argument('--headless=new')
         options.add_argument('--disable-blink-features=AutomationControlled')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--no-sandbox')
-        options = webdriver.ChromeOptions()
         prefs = {"profile.default_content_setting_values.notifications": 2}
         options.add_experimental_option("prefs", prefs)
 
@@ -133,7 +132,7 @@ def save_price_history_to_db_ml(symbol, price_history_data):
 
         except Exception as e:
             print(f" Error saving record {record}: {str(e)}")
-# Example usage
+
 if __name__ == "__main__":
     scraper = MerolaganiStockScraper(symbol="SARBTM", headless=False)
     data = scraper.fetch_price_history(max_records=20)

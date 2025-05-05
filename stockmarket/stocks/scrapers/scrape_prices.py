@@ -25,7 +25,7 @@ def scrape_company_price_history(symbol):
 
     # Set up Chrome options (optional: headless mode)
     options = Options()
-    # options.add_argument('--headless')
+    options.add_argument('--headless=new')
 
     # Set up ChromeDriver service
     service = Service(chromedriver_path)

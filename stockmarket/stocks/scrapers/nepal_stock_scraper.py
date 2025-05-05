@@ -18,7 +18,7 @@ logger = logging.getLogger("stocks")
 class NepalStockScraper:
     def __init__(self, headless=True):
         self.base_url = "https://www.nepalstock.com"
-        self.timeout = 15
+        self.timeout = 20
         self.search_delay = 2
         self.driver = self._init_driver(headless)
         self.price_history = []
@@ -27,14 +27,17 @@ class NepalStockScraper:
         """Initialize Chrome driver with options"""
         options = Options()
         if headless:
-            options.add_argument('--headless')
+            options.add_argument('--headless=new')
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
         
         # Make scraping less detectable
         options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_argument('--window-size=1920,1080')
+        options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36')
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
+
         
         # Update this path to your chromedriver location
         service = Service(settings.CHROMEDRIVER_PATH)
@@ -195,7 +198,7 @@ class NepalStockScraper:
             self.driver.quit()
 
 def main(): 
-    scraper = NepalStockScraper(headless=False)
+    scraper = NepalStockScraper(headless=True)
     try:
         if scraper.search_company("SARBTM"):
             if scraper.click_price_history_tab():
@@ -205,7 +208,7 @@ def main():
         scraper.close()
 
 def scrape_company_price_history_nepstock(symbol, max_pages=2, output_csv=False):
-    scraper = NepalStockScraper(headless=False)
+    scraper = NepalStockScraper(headless=True)
     try:
         if scraper.search_company(symbol):
             if scraper.click_price_history_tab():
