@@ -11,7 +11,8 @@ import pandas as pd
 import time
 from stockmarket import settings
 from stocks.models import CompanyProfile, PriceHistory
-
+import logging
+logger = logging.getLogger('stocks')
 
 class MerolaganiStockScraper:
     def __init__(self, symbol, headless=True, chromedriver_path=settings.CHROMEDRIVER_PATH):
@@ -41,12 +42,12 @@ class MerolaganiStockScraper:
         try:
             WebDriverWait(self.driver, 3).until(EC.alert_is_present())
             alert = self.driver.switch_to.alert
-            print(f"⚠ Dismissing alert: {alert.text}")
+            logger.info(f"⚠ Dismissing alert: {alert.text}")
             alert.dismiss()  # or alert.accept()
         except NoAlertPresentException:
-            print(" No alert present.")
+            logger.info(" No alert present.")
         except Exception as e:
-            print(f"⚠ Error while handling alert: {e}")
+            logger.info(f"⚠ Error while handling alert: {e}")
 
     def fetch_price_history(self, max_records):
         try:
@@ -82,7 +83,7 @@ class MerolaganiStockScraper:
                         "Qty": cols[7].text.strip().replace(",", ""),
                         "Turnover": cols[8].text.strip().replace(",", "")
                     })
-            print(f" Fetched {len(self.records)} records for {self.symbol}")
+            logger.info(f" Fetched {len(self.records)} records for {self.symbol}")
             return self.records
         except Exception as e:
             print(f" Error fetching price history: {e}")
@@ -116,7 +117,7 @@ def save_price_history_to_db_ml(symbol, price_history_data):
             date_obj = datetime.strptime(record["Date"], "%Y/%m/%d").date()
 
             if PriceHistory.objects.filter(company=company, date=date_obj).exists():
-                print(f"⚠ Already exists: {symbol} - {record['Date']}")
+                logger.info(f"⚠ Already exists: {symbol} - {record['Date']}")
                 continue
 
             price_entry = PriceHistory(
@@ -128,7 +129,7 @@ def save_price_history_to_db_ml(symbol, price_history_data):
                 close_price=record["LTP"],
             )
             price_entry.save()
-            print(f" Saved: {symbol} - {record['Date']}")
+            logger.info(f" Saved: {symbol} - {record['Date']}")
 
         except Exception as e:
             print(f" Error saving record {record}: {str(e)}")

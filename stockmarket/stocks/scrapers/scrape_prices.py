@@ -6,7 +6,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from datetime import datetime
 import time
-
+import logging
+logger = logging.getLogger('stocks')
 # Set up the Django environment
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "stockmarket.settings")
 django.setup()
@@ -55,7 +56,7 @@ def scrape_company_price_history(symbol):
         try:
             company = CompanyProfile.objects.get(symbol=symbol)
         except CompanyProfile.DoesNotExist:
-            print(f"Company with symbol '{symbol}' not found in database.")
+            logger.info(f"Company with symbol '{symbol}' not found in database.")
             return
 
         # Extract and save data
@@ -83,9 +84,9 @@ def scrape_company_price_history(symbol):
                             close_price=close_price,
                         )
                         price_history.save()
-                        print(f"Saved: {company.symbol} - {date}")
+                        logger.info(f"Saved: {company.symbol} - {date}")
                     else:
-                        print(f"Already exists: {company.symbol} - {date}")
+                        logger.info(f"Already exists: {company.symbol} - {date}")
 
                 except Exception as e:
                     print(f"Error processing row: {e}")

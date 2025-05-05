@@ -12,6 +12,8 @@ import time
 import pandas as pd
 from stocks.models import CompanyProfile, PriceHistory
 from stockmarket import settings
+import logging
+logger = logging.getLogger("stocks")
 
 class NepalStockScraper:
     def __init__(self, headless=True):
@@ -43,7 +45,7 @@ class NepalStockScraper:
     def search_company(self, symbol):
         """Search for a company by symbol and return its detail page URL"""
         try:
-            print(f"Searching for company with symbol: {symbol}")
+            logger.info(f"Searching for company with symbol: {symbol}")
             
             # Go to homepage
             self.driver.get(self.base_url)
@@ -65,7 +67,7 @@ class NepalStockScraper:
                 EC.presence_of_element_located((By.XPATH, f"//a[contains(., '{symbol}')]"))
             )
             url = company_link.get_attribute('href')
-            print(f"Found company URL: {url}")
+            logger.info(f"Found company URL: {url}")
             return url
             
         except Exception as e:
@@ -79,7 +81,7 @@ class NepalStockScraper:
                 EC.element_to_be_clickable((By.CSS_SELECTOR, "a#pricehistory-tab"))
             )
             price_history_tab.click()
-            print("Price History tab clicked")
+            logger.info("Price History tab clicked")
 
             # Wait for price history content to be visible
             WebDriverWait(self.driver, self.timeout).until(
@@ -128,9 +130,9 @@ class NepalStockScraper:
             
             if current_page_data:
                 self.price_history.extend(current_page_data)
-                print(f"📋 Scraped {len(current_page_data)} records from current page")
+                logger.info(f"📋 Scraped {len(current_page_data)} records from current page")
             else:
-                print("⚠️ No data found on current page")
+                logger.info("⚠️ No data found on current page")
             
             return True
             
@@ -149,7 +151,7 @@ class NepalStockScraper:
             )
             next_button.click()
             time.sleep(3)  # Wait for new page to load
-            print(" Navigated to next page")
+            logger.info(" Navigated to next page")
             return True
         except Exception as e:
             print(f" Error navigating to next page: {str(e)}")
@@ -164,7 +166,7 @@ class NepalStockScraper:
                     break
                 
                 if page_count >= max_pages:
-                    print(f"ℹReached maximum page limit ({max_pages})")
+                    logger.info(f"ℹReached maximum page limit ({max_pages})")
                     break
                 
                 if not self.go_to_next_page():
@@ -172,7 +174,7 @@ class NepalStockScraper:
                 
                 page_count += 1
             
-            print(f" Successfully scraped {len(self.price_history)} records from {page_count} pages")
+            logger.info(f" Successfully scraped {len(self.price_history)} records from {page_count} pages")
             return True
         except Exception as e:
             print(f" Error during pagination: {str(e)}")
@@ -183,7 +185,7 @@ class NepalStockScraper:
         try:
             df = pd.DataFrame(self.price_history)
             df.to_csv(filename, index=False)
-            print(f"Data saved to {filename}")
+            logger.info(f"Data saved to {filename}")
         except Exception as e:
             print(f" Error saving to CSV: {str(e)}")
     
@@ -232,7 +234,7 @@ def save_price_history_to_db(symbol, price_history_data):
 
             # Avoid duplicates
             if PriceHistory.objects.filter(company=company, date=date_obj).exists():
-                print(f"⚠ Already exists: {symbol} - {date_str}")
+                logger.info(f"⚠ Already exists: {symbol} - {date_str}")
                 continue
 
             price_entry = PriceHistory(
@@ -244,7 +246,7 @@ def save_price_history_to_db(symbol, price_history_data):
                 close_price=record.get("Close"),
             )
             price_entry.save()
-            print(f"Saved: {symbol} - {date_str}")
+            logger.info(f"Saved: {symbol} - {date_str}")
 
         except Exception as e:
             print(f"Error saving record {record}: {str(e)}")
