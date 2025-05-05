@@ -35,7 +35,6 @@ class NepalStockScraper:
         options.add_experimental_option('useAutomationExtension', False)
         
         # Update this path to your chromedriver location
-        service = Service('/home/dipesh/Desktop/chromedriver-linux64/chromedriver')
         service = Service(settings.CHROMEDRIVER_PATH)
         driver = webdriver.Chrome(service=service, options=options)
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
@@ -238,7 +237,7 @@ def save_price_history_to_db(symbol, price_history_data):
 
             price_entry = PriceHistory(
                 company=company,
-                date=record.get("Date"),
+                date=date_obj,
                 open_price=record.get("Open"),
                 high_price=record.get("High"),
                 low_price=record.get("Low"),
