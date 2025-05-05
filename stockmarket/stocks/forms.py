@@ -11,3 +11,7 @@ class CompanyNewsForm(forms.ModelForm):
     class Meta:
         model = CompanyNews
         fields = ['company', 'news_title', 'news_date', 'news_image', 'news_body']
+
+# Clear Price History Form
+class ConfirmDeletionForm(forms.Form):
+    confirm = forms.BooleanField(required=True, label="Are you sure you want to delete all price history records?")

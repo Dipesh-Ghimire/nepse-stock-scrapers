@@ -16,6 +16,7 @@ urlpatterns = [
     path('news/<int:news_id>/', views.company_news_detail, name='company_news_detail'),
 
     path('prices/', views.price_history_list, name='price_history_list'),
+    path('clear_prices/', views.delete_all_price_records, name='clear_pricehistory'),
 
     path('scrape-company/<int:id>/', views.scrape_company_prices, name='scrape_company_prices'),
     path('scrape-company-nepstock/<int:id>/', views.scrape_price_nepstock, name='scrape_price_nepstock'),

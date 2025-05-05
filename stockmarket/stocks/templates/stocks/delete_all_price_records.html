@@ -1,0 +1,12 @@
+<!-- templates/stocks/delete_all_price_records.html -->
+{% extends "base_generic.html" %}
+
+{% block content %}
+<h2>Delete All Price History Records</h2>
+
+<form method="post" onsubmit="return confirm('Are you sure you want to delete all price history records? This action cannot be undone.')">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, Delete All</button>
+    <a href="{% url 'price_history_list' %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

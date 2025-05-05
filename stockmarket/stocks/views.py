@@ -5,7 +5,7 @@ from django.http import JsonResponse
 
 from .scrapers.merolagani_scraper import MerolaganiStockScraper, save_price_history_to_db_ml
 
-from .forms import CompanyNewsForm, CompanyProfileForm
+from .forms import ConfirmDeletionForm, CompanyNewsForm, CompanyProfileForm
 
 from .models import CompanyNews, CompanyProfile, PriceHistory
 from .scrapers.scrape_prices import scrape_company_price_history
@@ -171,3 +171,8 @@ def add_company_news(request):
 def company_news_detail(request, news_id):
     news_article = CompanyNews.objects.get(id=news_id)
     return render(request, 'stocks/company_news_detail.html', {'article': news_article})
+def delete_all_price_records(request):
+    if request.method == 'POST':
+        deleted_count, _ = PriceHistory.objects.all().delete()
+        return redirect('price_history_list')  # Redirect to the price history list after deletion
+    return render(request, 'stocks/delete_all_price_records.html')
