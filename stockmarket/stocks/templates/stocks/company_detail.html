@@ -35,7 +35,12 @@
 
                     <!-- Scrape Latest Prices Button -->
                     <button id="scrape-button" class="btn btn-success">
-                        Scrape Latest Prices
+                        Scrape Latest Prices from ShareSansar
+                    </button>
+
+                    <!-- Scrape Latest Prices Button -->
+                    <button id="scrape-nepstock" class="btn btn-success">
+                        Scrape Latest Prices from NepalStock
                     </button>
 
                     <!-- Predict Future Prices Button -->
@@ -61,6 +66,18 @@ $(document).ready(function(){
     $('#scrape-button').click(function(){
         $.ajax({
             url: '{% url "scrape_company_prices" company.id %}',
+            method: 'GET',
+            success: function(response) {
+                $('#scrape-result').html(response.message);
+            },
+            error: function(error) {
+                $('#scrape-result').html('Error occurred while scraping.');
+            }
+        });
+    });
+    $('#scrape-nepstock').click(function(){
+        $.ajax({
+            url: '{% url "scrape_price_nepstock" company.id %}',
             method: 'GET',
             success: function(response) {
                 $('#scrape-result').html(response.message);

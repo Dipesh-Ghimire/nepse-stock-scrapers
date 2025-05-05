@@ -7,6 +7,7 @@ from .forms import CompanyNewsForm, CompanyProfileForm
 
 from .models import CompanyNews, CompanyProfile, PriceHistory
 from .scrapers.scrape_prices import scrape_company_price_history
+from .scrapers.nepal_stock_scraper import scrape_company_price_history_nepstock, save_price_history_to_db
 
 from statsmodels.tsa.arima.model import ARIMA
 from django.http import JsonResponse
@@ -113,6 +114,25 @@ def scrape_company_prices(request, id):
         return JsonResponse({'message': 'Company not found.'}, status=404)
     except Exception as e:
         return JsonResponse({'message': f'Error occurred: {str(e)}'}, status=500)
+def scrape_price_nepstock(request, id):
+    """
+    View to scrape and store price history for a given symbol from NepalStock.
+    URL: /scrape-price-history/?symbol=XYZ
+    """
+    symbol = CompanyProfile.objects.get(id=id).symbol
+    try:
+        # Step 1: Scrape
+        price_history_data = scrape_company_price_history_nepstock(symbol, max_pages=2, output_csv=False)
+        # Step 2: Save to DB
+        print(f"Scraped {len(price_history_data)} records for {symbol}.")
+        save_price_history_to_db(symbol, price_history_data)
+        return JsonResponse({
+            'status': 'success',
+            'symbol': symbol,
+            'records_scraped': len(price_history_data)
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
     
 def company_create(request):
     if request.method == 'POST':

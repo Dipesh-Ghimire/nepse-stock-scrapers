@@ -18,4 +18,5 @@ urlpatterns = [
     path('prices/', views.price_history_list, name='price_history_list'),
 
     path('scrape-company/<int:id>/', views.scrape_company_prices, name='scrape_company_prices'),
+    path('scrape-company-nepstock/<int:id>/', views.scrape_price_nepstock, name='scrape_price_nepstock'),
 ]

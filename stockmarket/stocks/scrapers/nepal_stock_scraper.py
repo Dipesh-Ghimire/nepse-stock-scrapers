@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import datetime
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -10,6 +10,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import TimeoutException
 import time
 import pandas as pd
+from stocks.models import CompanyProfile, PriceHistory
+from stockmarket import settings
 
 class NepalStockScraper:
     def __init__(self, headless=True):
@@ -34,6 +36,7 @@ class NepalStockScraper:
         
         # Update this path to your chromedriver location
         service = Service('/home/dipesh/Desktop/chromedriver-linux64/chromedriver')
+        service = Service(settings.CHROMEDRIVER_PATH)
         driver = webdriver.Chrome(service=service, options=options)
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         return driver
@@ -77,7 +80,7 @@ class NepalStockScraper:
                 EC.element_to_be_clickable((By.CSS_SELECTOR, "a#pricehistory-tab"))
             )
             price_history_tab.click()
-            print("📊 Price History tab clicked")
+            print("Price History tab clicked")
 
             # Wait for price history content to be visible
             WebDriverWait(self.driver, self.timeout).until(
@@ -89,47 +92,6 @@ class NepalStockScraper:
             print(f" Error clicking Price History tab: {str(e)}")
             return False
 
-    # def scrape_current_page(self):
-    #         """Scrape data from the current price history table"""
-    #         try:
-    #             table = WebDriverWait(self.driver, self.timeout).until(
-    #                 EC.presence_of_element_located((By.CSS_SELECTOR, "div.table-responsive table"))
-    #             )
-                
-    #             rows = table.find_elements(By.CSS_SELECTOR, "tbody tr")
-    #             current_page_data = []
-                
-    #             for row in rows:
-    #                 cols = row.find_elements(By.TAG_NAME, "td")
-    #                 if len(cols) >= 13:  # Ensure we have all columns
-    #                     data = {
-    #                         'SN': cols[0].text.strip(),
-    #                         'Date': cols[1].text.strip(),
-    #                         'Open': cols[2].text.strip().replace(',', ''),
-    #                         'High': cols[3].text.strip().replace(',', ''),
-    #                         'Low': cols[4].text.strip().replace(',', ''),
-    #                         'Close': cols[5].text.strip().replace(',', ''),
-    #                         'TTQ': cols[6].text.strip().replace(',', ''),
-    #                         'TT': cols[7].text.strip().replace(',', ''),
-    #                         'Previous Close': cols[8].text.strip().replace(',', ''),
-    #                         '52 Week High': cols[9].text.strip().replace(',', ''),
-    #                         '52 Week Low': cols[10].text.strip().replace(',', ''),
-    #                         'Total Trades': cols[11].text.strip().replace(',', ''),
-    #                         'ATP': cols[12].text.strip().replace(',', '')
-    #                     }
-    #                     current_page_data.append(data)
-                
-    #             if current_page_data:
-    #                 self.price_history.extend(current_page_data)  # Add to master list
-    #                 print(f"📋 Scraped {len(current_page_data)} records from current page")
-    #             else:
-    #                 print("⚠️ No data found on current page")
-                
-    #             return True
-    #         except Exception as e:
-    #             print(f"❌ Error scraping table: {str(e)}")
-    #             return False
-    
     def scrape_current_page(self):
         """Scrape data from the current price history table using parent ID and table classes"""
         try:
@@ -174,11 +136,12 @@ class NepalStockScraper:
             return True
             
         except TimeoutException:
-            print("❌ Timeout waiting for price history table to load")
+            print("Timeout waiting for price history table to load")
             return False
         except Exception as e:
-            print(f"❌ Unexpected error scraping table: {str(e)}")
+            print(f"Unexpected error scraping table: {str(e)}")
             return False
+    
     def go_to_next_page(self):
         """Navigate to the next page of results"""
         try:
@@ -236,12 +199,11 @@ def main():
         if scraper.search_company("SARBTM"):
             if scraper.click_price_history_tab():
                 scraper.scrape_all_pages(max_pages=2)
-                print(scraper.price_history)
                 scraper.save_to_csv("sarbtm_price_history.csv")
     finally:
         scraper.close()
 
-def scrape_company_price_history(symbol, max_pages=2, output_csv=False):
+def scrape_company_price_history_nepstock(symbol, max_pages=2, output_csv=False):
     scraper = NepalStockScraper(headless=False)
     try:
         if scraper.search_company(symbol):
@@ -254,5 +216,39 @@ def scrape_company_price_history(symbol, max_pages=2, output_csv=False):
         scraper.close()
     return []
 
+def save_price_history_to_db(symbol, price_history_data):
+    """
+    Save the scraped price history data to the Django DB.
+    """
+    try:
+        company = CompanyProfile.objects.get(symbol=symbol)
+    except CompanyProfile.DoesNotExist:
+        print(f"Company with symbol '{symbol}' not found in DB.")
+        return
+
+    for record in price_history_data:
+        try:
+            date_str = record.get("Date")
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+
+            # Avoid duplicates
+            if PriceHistory.objects.filter(company=company, date=date_obj).exists():
+                print(f"⚠ Already exists: {symbol} - {date_str}")
+                continue
+
+            price_entry = PriceHistory(
+                company=company,
+                date=record.get("Date"),
+                open_price=record.get("Open"),
+                high_price=record.get("High"),
+                low_price=record.get("Low"),
+                close_price=record.get("Close"),
+            )
+            price_entry.save()
+            print(f"Saved: {symbol} - {date_str}")
+
+        except Exception as e:
+            print(f"Error saving record {record}: {str(e)}")
+
 if __name__ == "__main__":
-    print(scrape_company_price_history("SARBTM", max_pages=2, output_csv=False))
+    scrape_company_price_history_nepstock("SARBTM", max_pages=2, output_csv=True)
