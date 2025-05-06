@@ -5,11 +5,11 @@ from selenium.common.exceptions import NoAlertPresentException
 import time
 import logging
 
-from .base_scraper import BaseStockScraper
+from .base_scraper import BaseScraper
 
 logger = logging.getLogger('stocks')
 
-class MerolaganiStockScraper(BaseStockScraper):
+class MerolaganiScraper(BaseScraper):
     def __init__(self, symbol, headless=False):
         super().__init__(headless=headless)
         self.symbol = symbol

@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger('stocks')
 
-class BaseStockScraper:
+class BaseScraper:
     def __init__(self, headless=True, timeout=15, chromedriver_path=settings.CHROMEDRIVER_PATH):
         self.headless = headless
         self.timeout = timeout

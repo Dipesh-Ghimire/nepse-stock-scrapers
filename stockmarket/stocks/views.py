@@ -157,7 +157,7 @@ def scrpae_merolagani_pricehistory(request, id):
         company = CompanyProfile.objects.get(id=id)
         symbol = company.symbol
 
-        scraper = merolagani_scraper.MerolaganiStockScraper(symbol=symbol, headless=True)
+        scraper = merolagani_scraper.MerolaganiScraper(symbol=symbol, headless=True)
         data = scraper.fetch_price_history(max_records=20)
         logger.info(f"Scraped {len(data)} records for {symbol} from Merolagani")
 

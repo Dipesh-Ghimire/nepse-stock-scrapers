@@ -6,11 +6,11 @@ from selenium.common.exceptions import TimeoutException
 import time
 import logging
 
-from .base_scraper import BaseStockScraper
+from .base_scraper import BaseScraper
 
 logger = logging.getLogger('stocks')
 
-class NepalStockScraper(BaseStockScraper):
+class NepalstockScraper(BaseScraper):
     def __init__(self, headless=True):
         super().__init__(headless=headless)
         self.base_url = "https://www.nepalstock.com"
@@ -114,7 +114,7 @@ class NepalStockScraper(BaseStockScraper):
             self.close()
 
 def scrape_company_price_history_nepstock(symbol, max_pages=2, output_csv=False):
-    scraper = NepalStockScraper(headless=True)
+    scraper = NepalstockScraper(headless=True)
     try:
         if scraper.search_company(symbol):
             if scraper.click_price_history_tab():

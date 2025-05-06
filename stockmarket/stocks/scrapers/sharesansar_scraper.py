@@ -7,11 +7,11 @@ import time
 from datetime import datetime
 import logging
 
-from .base_scraper import BaseStockScraper
+from .base_scraper import BaseScraper
 
 logger = logging.getLogger('stocks')
 
-class SharesansarScraper(BaseStockScraper):
+class SharesansarScraper(BaseScraper):
     def __init__(self, symbol, headless=False):
         super().__init__(headless=headless)
         self.symbol = symbol
