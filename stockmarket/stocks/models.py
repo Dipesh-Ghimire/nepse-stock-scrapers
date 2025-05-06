@@ -42,3 +42,21 @@ class PriceHistory(models.Model):
         ]
     def __str__(self):
         return f"{self.company.symbol} - {self.date}"
+
+class FloorSheet(models.Model):
+    company = models.ForeignKey(CompanyProfile, on_delete=models.CASCADE)
+    transaction_id = models.CharField(max_length=25, unique=True)
+    buyer = models.PositiveIntegerField()
+    seller = models.PositiveIntegerField()
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    rate = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    date = models.DateField()
+
+    class Meta:
+        ordering = ['-date']
+        verbose_name = "Floor Sheet Entry"
+        verbose_name_plural = "Floor Sheet Entries"
+
+    def __str__(self):
+        return f"Txn {self.transaction_no} - {self.date}"

@@ -21,4 +21,6 @@ urlpatterns = [
     path('scrape-company-sharesansar/<int:id>/', views.scrape_sharesansar_pricehistory, name='scrape_price_sharesansar'),
     path('scrape-company-nepstock/<int:id>/', views.scrape_nepstock_pricehistory, name='scrape_price_nepstock'),
     path('scrape-company-merolagani/<int:id>/', views.scrpae_merolagani_pricehistory, name='scrape_price_merolagani'),
+
+    path('floorsheet/<int:id>', views.list_floorsheet, name='floorsheet_list'),
 ]

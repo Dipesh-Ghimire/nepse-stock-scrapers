@@ -9,7 +9,7 @@ from .scrapers.nepstock_scraper import scrape_company_price_history_nepstock
 from .utility import save_price_history_to_db_ml, save_price_history_to_db, save_price_history_to_db_ss
 from .forms import CompanyNewsForm, CompanyProfileForm
 
-from .models import CompanyNews, CompanyProfile, PriceHistory
+from .models import CompanyNews, CompanyProfile, PriceHistory, FloorSheet
 
 from statsmodels.tsa.arima.model import ARIMA
 
@@ -202,3 +202,17 @@ def delete_all_price_records(request):
         deleted_count, _ = PriceHistory.objects.all().delete()
         return redirect('price_history_list')  # Redirect to the price history list after deletion
     return render(request, 'stocks/delete_all_price_records.html')
+
+def list_floorsheet(request, id):
+    """
+    List the floorsheet for a specific company.
+    """
+    try:
+        company = CompanyProfile.objects.get(id=id)
+        floorsheet = FloorSheet.objects.filter(company=company).order_by('-date')
+        return render(request, 'stocks/floorsheet_list.html', {'company': company, 'floorsheet': floorsheet})
+    except CompanyProfile.DoesNotExist:
+        return JsonResponse({'error': 'Company not found.'}, status=404)
+    except Exception as e:
+        logger.exception("Error fetching floorsheet")
+        return JsonResponse({'error': str(e)}, status=500)

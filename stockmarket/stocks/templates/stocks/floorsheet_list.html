@@ -1,0 +1,40 @@
+{% extends 'base_generic.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>{{ company.name }} - Floorsheet</h1>
+
+    {% if floorsheet %}
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>S.N.</th>
+                <th>Date</th>
+                <th>Transaction No</th>
+                <th>Buyer</th>
+                <th>Seller</th>
+                <th>Quantity</th>
+                <th>Rate</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in floorsheet %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ row.date }}</td>
+                <td>{{ row.transaction_id }}</td>
+                <td>{{ row.buyer }}</td>
+                <td>{{ row.seller}}</td>
+                <td>{{ row.quantity}}</td>
+                <td>{{ row.rate}}</td>
+                <td>{{ row.amount}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No floorsheet available for this company.</p>
+    {% endif %}
+</div>
+{% endblock %}
