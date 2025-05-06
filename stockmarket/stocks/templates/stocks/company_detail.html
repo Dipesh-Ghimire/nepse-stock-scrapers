@@ -27,7 +27,7 @@
                     <p>{{ company.description }}</p>
                 </div>
 
-                <div class="d-flex flex-wrap gap-2 mt-4">
+                {% comment %} <div class="d-flex flex-wrap gap-2 mt-4">
                     <!-- View Price History Button -->
                     <a href="{% url 'price_history' company.id %}" class="btn btn-primary">
                         View Price History
@@ -53,11 +53,67 @@
                         Scrape Latest Prices from Merolagani
                     </button>
 
+                    <!-- Scrape Floorsheet Button -->
+                    <button id="scrape-floorsheet-ss" class="btn btn-secondary">
+                        Scrape Floorsheet from Sharesansar
+                    </button>
+
+                    <!-- Scrape Floorsheet Button -->
+                    <button id="scrape-floorsheet-ns" class="btn btn-secondary">
+                        Scrape Floorsheet from Sharesansar
+                    </button>
+
+                    <!-- Scrape Floorsheet Button -->
+                    <button id="scrape-floorsheet-ml" class="btn btn-secondary">
+                        Scrape Floorsheet from Sharesansar
+                    </button>
+
                     <!-- Predict Future Prices Button -->
                     <button id="predict-button" class="btn btn-warning">
                         Predict Future Prices
                     </button>
+                </div> {% endcomment %}
+                <div class="row mt-4">
+                    <!-- Price History and Floorsheet Links -->
+                    <div class="col-md-12 mb-3">
+                        <div class="btn-group flex-wrap" role="group">
+                            <a href="{% url 'price_history' company.id %}" class="btn btn-outline-primary">
+                                View Price History
+                            </a>
+                            <a href="{% url 'floorsheet_list' company.id %}" class="btn btn-outline-primary">
+                                View Floorsheet
+                            </a>
+                        </div>
+                    </div>
+                
+                    <!-- Scraping Buttons -->
+                    <div class="col-md-12 mb-3">
+                        <label class="fw-bold">Scrape Latest Prices:</label>
+                        <div class="btn-group flex-wrap" role="group">
+                            <button id="scrape-button" class="btn btn-outline-success">ShareSansar</button>
+                            <button id="scrape-nepstock" class="btn btn-outline-success">NepalStock</button>
+                            <button id="scrape-merolagani" class="btn btn-outline-success">Merolagani</button>
+                        </div>
+                    </div>
+                
+                    <!-- Scrape Floorsheet Buttons -->
+                    <div class="col-md-12 mb-3">
+                        <label class="fw-bold">Scrape Floorsheet:</label>
+                        <div class="btn-group flex-wrap" role="group">
+                            <button id="scrape-floorsheet-ss" class="btn btn-outline-secondary">ShareSansar</button>
+                            <button id="scrape-floorsheet-ns" class="btn btn-outline-secondary">NepalStock</button>
+                            <button id="scrape-floorsheet-ml" class="btn btn-outline-secondary">Merolagani</button>
+                        </div>
+                    </div>
+                
+                    <!-- Prediction Button -->
+                    <div class="col-md-12">
+                        <button id="predict-button" class="btn btn-warning w-100">
+                            Predict Future Prices
+                        </button>
+                    </div>
                 </div>
+                
 
                 <!-- Result Message Section -->
                 <div id="scrape-result" class="mt-3 text-success fw-bold"></div>
@@ -100,6 +156,18 @@ $(document).ready(function(){
     $('#scrape-merolagani').click(function(){
         $.ajax({
             url: '{% url "scrape_price_merolagani" company.id %}',
+            method: 'GET',
+            success: function(response) {
+                $('#scrape-result').html(response.message);
+            },
+            error: function(error) {
+                $('#scrape-result').html('Error occurred while scraping.');
+            }
+        });
+    });
+    $('#scrape-floorsheet-ss').click(function(){
+        $.ajax({
+            url: '{% url "scrape_floorsheet_ss" company.id %}',
             method: 'GET',
             success: function(response) {
                 $('#scrape-result').html(response.message);

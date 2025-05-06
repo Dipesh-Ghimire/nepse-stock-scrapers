@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from .scrapers import merolagani_scraper
 from .scrapers import sharesansar_scraper
 from .scrapers.nepstock_scraper import scrape_company_price_history_nepstock
-from .utility import save_price_history_to_db_ml, save_price_history_to_db, save_price_history_to_db_ss
+from .utility import save_price_history_to_db_ml, save_price_history_to_db, save_price_history_to_db_ss, store_floorsheet_to_db_ss
 from .forms import CompanyNewsForm, CompanyProfileForm
 
 from .models import CompanyNews, CompanyProfile, PriceHistory, FloorSheet
@@ -216,3 +216,24 @@ def list_floorsheet(request, id):
     except Exception as e:
         logger.exception("Error fetching floorsheet")
         return JsonResponse({'error': str(e)}, status=500)
+
+def scrape_floorsheet_ss(request, id):
+    """
+    Scrape the floorsheet for a specific company using the Sharesansar scraper.
+    """
+    try:
+        company = CompanyProfile.objects.get(id=id)
+        symbol = company.symbol
+
+        scraper = sharesansar_scraper.SharesansarScraper(symbol=symbol, headless=True)
+        floorsheet_data = scraper.fetch_floorsheet()
+        logger.info(f"Scraped {len(floorsheet_data)} floorsheet for {symbol} from Sharesansar")
+
+        # Save to DB
+        store_floorsheet_to_db_ss(symbol, floorsheet_data)
+
+        return JsonResponse({'message': f"Successfully scraped floorsheet for {company.name}."})
+    except CompanyProfile.DoesNotExist:
+        return JsonResponse({'message': 'Company not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'message': f'Error occurred: {str(e)}'}, status=500)

@@ -23,4 +23,5 @@ urlpatterns = [
     path('scrape-company-merolagani/<int:id>/', views.scrpae_merolagani_pricehistory, name='scrape_price_merolagani'),
 
     path('floorsheet/<int:id>', views.list_floorsheet, name='floorsheet_list'),
+    path('floorsheet/<int:id>/scrape', views.scrape_floorsheet_ss, name='scrape_floorsheet_ss'),
 ]
