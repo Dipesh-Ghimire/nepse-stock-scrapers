@@ -36,7 +36,7 @@ class NepalstockScraper(BaseScraper):
             logger.info(f"🔍 Navigated to {url}")
             return True
         except Exception as e:
-            logger.error(f"❌ Error searching for company {symbol}: {e}")
+            logger.error(f" Error searching for company {symbol}: {e}")
             return False
 
     def click_price_history_tab(self):
@@ -52,7 +52,7 @@ class NepalstockScraper(BaseScraper):
             time.sleep(2)
             return True
         except Exception as e:
-            logger.error(f"❌ Error clicking Price History tab: {e}")
+            logger.error(f" Error clicking Price History tab: {e}")
             return False
 
     def scrape_current_page(self):
@@ -82,10 +82,10 @@ class NepalstockScraper(BaseScraper):
                         'Total Trades': cols[11].text.strip().replace(',', ''),
                         'ATP': cols[12].text.strip().replace(',', '')
                     })
-            logger.info(f"✅ Scraped {len(self.records)} records from page")
+            logger.info(f" Scraped {len(self.records)} records from page")
             return True
         except Exception as e:
-            logger.error(f"❌ Error scraping page: {e}")
+            logger.error(f" Error scraping page: {e}")
             return False
 
     def go_to_next_page(self):
@@ -109,7 +109,7 @@ class NepalstockScraper(BaseScraper):
                 if not self.go_to_next_page():
                     break
                 page += 1
-            logger.info(f"✅ Finished scraping {len(self.records)} records across {page} pages")
+            logger.info(f" Finished scraping {len(self.records)} records across {page} pages")
         finally:
             self.close()
 
