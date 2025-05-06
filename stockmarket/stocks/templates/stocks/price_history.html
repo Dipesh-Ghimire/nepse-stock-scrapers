@@ -8,6 +8,7 @@
     <table class="table table-bordered">
         <thead>
             <tr>
+                <th>S.N.</th>
                 <th>Date</th>
                 <th>Open Price</th>
                 <th>High Price</th>
@@ -18,6 +19,7 @@
         <tbody>
             {% for price in price_history %}
             <tr>
+                <td>{{ forloop.counter }}</td>
                 <td>{{ price.date }}</td>
                 <td>{{ price.open_price }}</td>
                 <td>{{ price.high_price }}</td>
