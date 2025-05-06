@@ -18,7 +18,7 @@ urlpatterns = [
     path('prices/', views.price_history_list, name='price_history_list'),
     path('clear_prices/', views.delete_all_price_records, name='clear_pricehistory'),
 
-    path('scrape-company/<int:id>/', views.scrape_company_prices, name='scrape_company_prices'),
-    path('scrape-company-nepstock/<int:id>/', views.scrape_price_nepstock, name='scrape_price_nepstock'),
-    path('scrape-company-merolagani/<int:id>/', views.scrape_merolagani_view, name='scrape_price_merolagani'),
+    path('scrape-company-sharesansar/<int:id>/', views.scrape_sharesansar_pricehistory, name='scrape_price_sharesansar'),
+    path('scrape-company-nepstock/<int:id>/', views.scrape_nepstock_pricehistory, name='scrape_price_nepstock'),
+    path('scrape-company-merolagani/<int:id>/', views.scrpae_merolagani_pricehistory, name='scrape_price_merolagani'),
 ]

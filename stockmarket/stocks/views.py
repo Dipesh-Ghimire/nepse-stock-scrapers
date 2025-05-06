@@ -3,17 +3,18 @@ from statsmodels.tsa.arima.model import ARIMA
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
 
-from .scrapers.merolagani_scraper import MerolaganiStockScraper, save_price_history_to_db_ml
-
-from .forms import ConfirmDeletionForm, CompanyNewsForm, CompanyProfileForm
+from .scrapers import merolagani_scraper
+from .scrapers import sharesansar_scraper
+from .scrapers.nepstock_scraper import scrape_company_price_history_nepstock
+from .utility import save_price_history_to_db_ml, save_price_history_to_db, save_price_history_to_db_ss
+from .forms import CompanyNewsForm, CompanyProfileForm
 
 from .models import CompanyNews, CompanyProfile, PriceHistory
-from .scrapers.scrape_prices import scrape_company_price_history
-from .scrapers.nepal_stock_scraper import scrape_company_price_history_nepstock, save_price_history_to_db
 
 from statsmodels.tsa.arima.model import ARIMA
-from django.http import JsonResponse
-import pandas as pd
+
+import logging
+logger = logging.getLogger('stocks')
 
 def fetch_price_history(company):
     # Fetch PriceHistory records for this specific company
@@ -107,43 +108,70 @@ def company_news_list(request):
     news = CompanyNews.objects.all()
     return render(request, 'stocks/company_news_list.html', {'news': news})
 
-def scrape_company_prices(request, id):
+def scrape_sharesansar_pricehistory(request, id):
     try:
         company = CompanyProfile.objects.get(id=id)
-        scrape_company_price_history(company.symbol)  # Use the generalized scraper
+        symbol = company.symbol
+
+        scraper = sharesansar_scraper.SharesansarScraper(symbol=symbol, headless=True)
+        data = scraper.fetch_price_history(max_records=20)
+        logger.info(f"Scraped {len(data)} records for {symbol} from Sharesansar")
+
+        save_price_history_to_db_ss(symbol, data)
+
         return JsonResponse({'message': f"Successfully scraped prices for {company.name}."})
     except CompanyProfile.DoesNotExist:
         return JsonResponse({'message': 'Company not found.'}, status=404)
     except Exception as e:
         return JsonResponse({'message': f'Error occurred: {str(e)}'}, status=500)
-def scrape_price_nepstock(request, id):
+    
+def scrape_nepstock_pricehistory(request, id):
     """
-    Scrape price history for a specific company using the NepStock scraper.
+    Scrape price history for a specific company using the NepalStock scraper.
     """
-    symbol = CompanyProfile.objects.get(id=id).symbol
     try:
+        company = CompanyProfile.objects.get(id=id)
+        symbol = company.symbol
+
         # Step 1: Scrape
         price_history_data = scrape_company_price_history_nepstock(symbol, max_pages=2, output_csv=False)
-        # Step 2: Save to DB
-        print(f"Scraped {len(price_history_data)} records for {symbol}.")
+        logger.info(f"Scraped {len(price_history_data)} records for {symbol} from NepalStock")
+
+        # Step 2: Save to DB using unified function
         save_price_history_to_db(symbol, price_history_data)
         return JsonResponse({
             "message": f"Scraped and saved {len(price_history_data)} records for {symbol}",
             'records_scraped': len(price_history_data)
         })
+    except CompanyProfile.DoesNotExist:
+        return JsonResponse({"error": f"Company with ID {id} not found."}, status=404)
     except Exception as e:
+        logger.exception("Error scraping from NepalStock")
         return JsonResponse({'error': str(e)}, status=500)
-def scrape_merolagani_view(request, id):
-    symbol = CompanyProfile.objects.get(id=id).symbol
+
+def scrpae_merolagani_pricehistory(request, id):
+    """
+    Scrape price history for a specific company using the Merolagani scraper.
+    """
     try:
-        scraper = MerolaganiStockScraper(symbol=symbol, headless=True)
+        company = CompanyProfile.objects.get(id=id)
+        symbol = company.symbol
+
+        scraper = merolagani_scraper.MerolaganiStockScraper(symbol=symbol, headless=True)
         data = scraper.fetch_price_history(max_records=20)
+        logger.info(f"Scraped {len(data)} records for {symbol} from Merolagani")
+
+        # Save using the same unified function
         save_price_history_to_db_ml(symbol, data)
+
         return JsonResponse({
             "message": f"Scraped and saved {len(data)} records for {symbol}",
             "records_saved": len(data)
         })
+    except CompanyProfile.DoesNotExist:
+        return JsonResponse({"error": f"Company with ID {id} not found."}, status=404)
     except Exception as e:
+        logger.exception("Error scraping from Merolagani")
         return JsonResponse({"error": str(e)}, status=500)
 
 def company_create(request):

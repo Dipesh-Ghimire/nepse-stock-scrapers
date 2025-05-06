@@ -20,7 +20,7 @@
     $(document).ready(function(){
         $('#scrape-button').click(function(){
             $.ajax({
-                url: '{% url "scrape_company_prices" company.id %}',  // Dynamic URL
+                url: '{% url "scrape_price_sharesansar" company.id %}',  // Dynamic URL
                 method: 'GET',
                 success: function(response) {
                     $('#result').html(response.message);  // Message from Django view

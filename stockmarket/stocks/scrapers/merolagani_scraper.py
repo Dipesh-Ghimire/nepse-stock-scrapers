@@ -1,64 +1,42 @@
-from datetime import datetime
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import UnexpectedAlertPresentException, NoAlertPresentException
-
-import pandas as pd
+from selenium.common.exceptions import NoAlertPresentException
 import time
-from stockmarket import settings
-from stocks.models import CompanyProfile, PriceHistory
 import logging
+
+from .base_scraper import BaseStockScraper
+
 logger = logging.getLogger('stocks')
 
-class MerolaganiStockScraper:
-    def __init__(self, symbol, headless=False, chromedriver_path=settings.CHROMEDRIVER_PATH):
+class MerolaganiStockScraper(BaseStockScraper):
+    def __init__(self, symbol, headless=False):
+        super().__init__(headless=headless)
         self.symbol = symbol
         self.base_url = f"https://merolagani.com/CompanyDetail.aspx?symbol={symbol}"
-        self.records = []
-        self.timeout = 15
-        self.chromedriver_path = chromedriver_path
-        self.driver = self._init_driver(headless)
-
-    def _init_driver(self, headless=False):
-        options = Options()
-        if headless:
-            options.add_argument('--headless=new')
-        options.add_argument('--disable-blink-features=AutomationControlled')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--no-sandbox')
-        prefs = {"profile.default_content_setting_values.notifications": 2}
-        options.add_experimental_option("prefs", prefs)
-
-        service = Service(self.chromedriver_path)
-        driver = webdriver.Chrome(service=service, options=options)
-        return driver
 
     def dismiss_alert_if_present(self):
         try:
             WebDriverWait(self.driver, 3).until(EC.alert_is_present())
             alert = self.driver.switch_to.alert
             logger.info(f"⚠ Dismissing alert: {alert.text}")
-            alert.dismiss()  # or alert.accept()
+            alert.dismiss()
         except NoAlertPresentException:
-            logger.info(" No alert present.")
+            logger.info("No alert present.")
         except Exception as e:
-            logger.info(f"⚠ Error while handling alert: {e}")
+            logger.info(f"⚠ Error handling alert: {e}")
 
-    def fetch_price_history(self, max_records):
+    def fetch_price_history(self, max_records=20):
         try:
             self.driver.get(self.base_url)
             self.dismiss_alert_if_present()
-            # Wait for the price history tab and click it
+
             price_history_tab = WebDriverWait(self.driver, self.timeout).until(
                 EC.element_to_be_clickable((By.ID, "ctl00_ContentPlaceHolder1_CompanyDetail1_lnkHistoryTab"))
             )
             price_history_tab.click()
             self.dismiss_alert_if_present()
-            # Wait for the table to load
+
             WebDriverWait(self.driver, self.timeout).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "table.table-bordered"))
             )
@@ -82,58 +60,10 @@ class MerolaganiStockScraper:
                         "Qty": cols[7].text.strip().replace(",", ""),
                         "Turnover": cols[8].text.strip().replace(",", "")
                     })
-            logger.info(f" Fetched {len(self.records)} records for {self.symbol}")
+            logger.info(f"Fetched {len(self.records)} records for {self.symbol}")
             return self.records
         except Exception as e:
-            print(f" Error fetching price history: {e}")
+            logger.error(f"Error fetching price history: {e}")
             return []
         finally:
-            self.driver.quit()
-
-    def save_to_csv(self, filename=None):
-        if not self.records:
-            print("⚠ No data to save.")
-            return
-        if not filename:
-            filename = f"{self.symbol}_merolagani_history.csv"
-        df = pd.DataFrame(self.records)
-        df.to_csv(filename, index=False)
-        print(f"📁 Data saved to {filename}")
-
-def save_price_history_to_db_ml(symbol, price_history_data):
-    """
-    Save Merolagani price history data to the Django DB.
-    """
-    try:
-        company = CompanyProfile.objects.get(symbol=symbol)
-    except CompanyProfile.DoesNotExist:
-        print(f" Company with symbol '{symbol}' not found in DB.")
-        return
-
-    for record in price_history_data:
-        try:
-            # Convert date from YYYY/MM/DD to Python date
-            date_obj = datetime.strptime(record["Date"], "%Y/%m/%d").date()
-
-            if PriceHistory.objects.filter(company=company, date=date_obj).exists():
-                logger.info(f"⚠ Already exists: {symbol} - {record['Date']}")
-                continue
-
-            price_entry = PriceHistory(
-                company=company,
-                date=date_obj,
-                open_price=record["Open"],
-                high_price=record["High"],
-                low_price=record["Low"],
-                close_price=record["LTP"],
-            )
-            price_entry.save()
-            logger.info(f" Saved: {symbol} - {record['Date']}")
-
-        except Exception as e:
-            print(f" Error saving record {record}: {str(e)}")
-
-if __name__ == "__main__":
-    scraper = MerolaganiStockScraper(symbol="SARBTM", headless=False)
-    data = scraper.fetch_price_history(max_records=20)
-    scraper.save_to_csv()
+            self.close()

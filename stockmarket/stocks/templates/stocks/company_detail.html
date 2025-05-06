@@ -70,7 +70,7 @@
 $(document).ready(function(){
     $('#scrape-button').click(function(){
         $.ajax({
-            url: '{% url "scrape_company_prices" company.id %}',
+            url: '{% url "scrape_price_sharesansar" company.id %}',
             method: 'GET',
             success: function(response) {
                 $('#scrape-result').html(response.message);
