@@ -18,6 +18,7 @@ class SharesansarScraper(BaseScraper):
         super().__init__(headless=headless)
         self.symbol = symbol
         self.base_url = f"https://www.sharesansar.com/company/{self.symbol}"
+        self.wait = WebDriverWait(self.driver, self.timeout)
 
     def fetch_price_history(self, max_records=9999):
 
@@ -27,7 +28,7 @@ class SharesansarScraper(BaseScraper):
         try:
             self.driver.get(self.base_url)
 
-            price_history_tab = WebDriverWait(self.driver, self.timeout).until(
+            price_history_tab = self.wait.until(
                 EC.element_to_be_clickable((By.ID, "btn_cpricehistory"))
             )
             price_history_tab.click()
@@ -35,7 +36,7 @@ class SharesansarScraper(BaseScraper):
 
             keep_scraping = True
             while keep_scraping:
-                table = WebDriverWait(self.driver, self.timeout).until(
+                table = self.wait.until(
                     EC.presence_of_element_located((By.ID, "myTableCPriceHistory"))
                 )
                 rows = table.find_elements(By.TAG_NAME, "tr")
