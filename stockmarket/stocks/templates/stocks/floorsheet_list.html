@@ -3,7 +3,10 @@
 {% block content %}
 <div class="container mt-4">
     <h1>{{ company.name }} - Floorsheet</h1>
-
+    {% comment %} Button to Empty Floorsheet {% endcomment %}
+    <div class="mb-3">
+        <a href="{% url 'empty_floorsheet' company.id %}" class="btn btn-danger">Empty Floorsheet</a>
+    </div>
     {% if floorsheet %}
     <table class="table table-bordered">
         <thead>

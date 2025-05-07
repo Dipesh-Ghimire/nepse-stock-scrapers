@@ -1,0 +1,11 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+<h2>Delete Entire Floorsheet Records of {{company.symbol}}</h2>
+
+<form method="post" onsubmit="return confirm('Are you sure you want to delete entire floorsheet records? This action cannot be undone.')">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Yes, Delete All</button>
+    <a href="{% url 'floorsheet_list' company.id %}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}
