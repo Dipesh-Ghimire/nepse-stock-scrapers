@@ -3,6 +3,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.support.ui import Select
+from selenium.common.exceptions import NoSuchElementException
 
 import time
 from datetime import datetime
@@ -17,23 +18,14 @@ class SharesansarScraper(BaseScraper):
         super().__init__(headless=headless)
         self.symbol = symbol
         self.base_url = f"https://www.sharesansar.com/company/{self.symbol}"
-    
-    def dismiss_alert_if_present(self):
-        try:
-            WebDriverWait(self.driver, 3).until(EC.alert_is_present())
-            alert = self.driver.switch_to.alert
-            logger.info(f"⚠ Dismissing alert: {alert.text}")
-            alert.dismiss()
-        except NoAlertPresentException:
-            logger.info("No alert present.")
-        except Exception as e:
-            logger.info(f"⚠ Error handling alert: {e}")
 
-    def fetch_price_history(self, max_records=20):
+    def fetch_price_history(self, max_records=9999):
+
         self.records = []
+        logger.info(f"Started Scraping price history for {self.symbol} from ShareSansar")
+
         try:
             self.driver.get(self.base_url)
-            self.dismiss_alert_if_present()
 
             price_history_tab = WebDriverWait(self.driver, self.timeout).until(
                 EC.element_to_be_clickable((By.ID, "btn_cpricehistory"))
@@ -41,33 +33,57 @@ class SharesansarScraper(BaseScraper):
             price_history_tab.click()
             time.sleep(3)
 
-            table = self.driver.find_element(By.ID, "myTableCPriceHistory")
-            rows = table.find_elements(By.TAG_NAME, "tr")
+            keep_scraping = True
+            while keep_scraping:
+                table = WebDriverWait(self.driver, self.timeout).until(
+                    EC.presence_of_element_located((By.ID, "myTableCPriceHistory"))
+                )
+                rows = table.find_elements(By.TAG_NAME, "tr")
 
-            for i, row in enumerate(rows):
-                if max_records and i >= max_records:
-                    break
-                cols = row.find_elements(By.TAG_NAME, "td")
-                if cols:
+                for row in rows:
+                    cols = row.find_elements(By.TAG_NAME, "td")
+                    if cols:
+                        try:
+                            date = cols[1].text.strip()
+                            open_price = cols[2].text.strip()
+                            high_price = cols[3].text.strip()
+                            low_price = cols[4].text.strip()
+                            close_price = cols[5].text.strip()
+
+                            date_obj = datetime.strptime(date, "%Y-%m-%d").date()
+
+                            if date_obj.year < 2025:
+                                keep_scraping = False
+                                break  # Stop scraping if older than 2025
+
+                            record = {
+                                "Date": str(date_obj),
+                                "Open": open_price,
+                                "High": high_price,
+                                "Low": low_price,
+                                "Close": close_price,
+                            }
+                            self.records.append(record)
+
+                            if max_records and len(self.records) >= max_records:
+                                keep_scraping = False
+                                break
+                        except Exception as e:
+                            logger.warning(f"Error parsing row: {e}")
+
+                # Click 'Next' if still scraping
+                if keep_scraping:
                     try:
-                        date = cols[1].text.strip()
-                        open_price = cols[2].text.strip()
-                        high_price = cols[3].text.strip()
-                        low_price = cols[4].text.strip()
-                        close_price = cols[5].text.strip()
+                        next_btn = self.driver.find_element(By.ID, "myTableCPriceHistory_next")
+                        # Stop if next button is disabled
+                        if "disabled" in next_btn.get_attribute("class"):
+                            break
+                        self.driver.execute_script("arguments[0].click();", next_btn)
+                        time.sleep(2)
+                    except NoSuchElementException:
+                        logger.info("Next button not found, ending pagination.")
+                        break
 
-                        date_obj = datetime.strptime(date, "%Y-%m-%d").date()
-
-                        record = {
-                            "Date": str(date_obj),
-                            "Open": open_price,
-                            "High": high_price,
-                            "Low": low_price,
-                            "Close": close_price,
-                        }
-                        self.records.append(record)
-                    except Exception as e:
-                        logger.warning(f"Error parsing row: {e}")
         except Exception as e:
             logger.error(f"Error fetching price history for {self.symbol}: {e}")
         finally:
@@ -75,13 +91,12 @@ class SharesansarScraper(BaseScraper):
 
         logger.info(f"Scraped {len(self.records)} records for {self.symbol} from ShareSansar")
         return self.records
-    
+
     def fetch_floorsheet(self):
         floorsheet = []
-
+        logger.info(f"Started Scraping floorsheet for {self.symbol} from ShareSansar")
         try:
             self.driver.get(self.base_url)
-            self.dismiss_alert_if_present()
 
             # Step 1: Click the Floorsheet tab
             floorsheet_tab = WebDriverWait(self.driver, self.timeout).until(
