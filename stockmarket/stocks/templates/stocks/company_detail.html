@@ -200,6 +200,30 @@ $(document).ready(function(){
             }
         });
     });
+    $('#scrape-floorsheet-ml').click(function(){
+        $.ajax({
+            url: '{% url "scrape_floorsheet_ml" company.id %}',
+            method: 'GET',
+            success: function(response) {
+                showAlert(response.message, 'success');
+            },
+            error: function(error) {
+                showAlert('Error occurred while scraping.', 'danger');
+            }
+        });
+    });
+    $('#scrape-floorsheet-ns').click(function(){
+        $.ajax({
+            url: '{% url "scrape_floorsheet_ns" company.id %}',
+            method: 'GET',
+            success: function(response) {
+                showAlert(response.message, 'success');
+            },
+            error: function(error) {
+                showAlert('Error occurred while scraping.', 'danger');
+            }
+        });
+    });
 
     $('#predict-button').click(function(){
         $.ajax({

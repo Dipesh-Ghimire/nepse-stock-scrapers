@@ -5,8 +5,8 @@ from django.http import JsonResponse
 
 from .scrapers import merolagani_scraper
 from .scrapers import sharesansar_scraper
-from .scrapers.nepstock_scraper import scrape_company_price_history_nepstock
-from .utility import save_price_history_to_db_ml, save_price_history_to_db, save_price_history_to_db_ss, store_floorsheet_to_db_ss
+from .scrapers.nepstock_scraper import scrape_company_price_history_nepstock, scrape_company_floorsheet_nepstock
+from .utility import save_price_history_to_db_ml, save_price_history_to_db, save_price_history_to_db_ss, store_floorsheet_to_db_ss, store_floorsheet_to_db_ml
 from .forms import CompanyNewsForm, CompanyProfileForm
 
 from .models import CompanyNews, CompanyProfile, PriceHistory, FloorSheet
@@ -114,7 +114,7 @@ def scrape_sharesansar_pricehistory(request, id):
         symbol = company.symbol
 
         scraper = sharesansar_scraper.SharesansarScraper(symbol=symbol, headless=True)
-        data = scraper.fetch_price_history(max_records=20)
+        data = scraper.fetch_price_history()
         logger.info(f"Scraped {len(data)} records for {symbol} from Sharesansar")
 
         save_price_history_to_db_ss(symbol, data)
@@ -134,7 +134,7 @@ def scrape_nepstock_pricehistory(request, id):
         symbol = company.symbol
 
         # Step 1: Scrape
-        price_history_data = scrape_company_price_history_nepstock(symbol, max_pages=2, output_csv=False)
+        price_history_data = scrape_company_price_history_nepstock(symbol, max_pages=8, output_csv=False)
         logger.info(f"Scraped {len(price_history_data)} records for {symbol} from NepalStock")
 
         # Step 2: Save to DB using unified function
@@ -158,7 +158,7 @@ def scrpae_merolagani_pricehistory(request, id):
         symbol = company.symbol
 
         scraper = merolagani_scraper.MerolaganiScraper(symbol=symbol, headless=True)
-        data = scraper.fetch_price_history(max_records=20)
+        data = scraper.fetch_price_history(max_records=150)
         logger.info(f"Scraped {len(data)} records for {symbol} from Merolagani")
 
         # Save using the same unified function
@@ -237,3 +237,60 @@ def scrape_floorsheet_ss(request, id):
         return JsonResponse({'message': 'Company not found.'}, status=404)
     except Exception as e:
         return JsonResponse({'message': f'Error occurred: {str(e)}'}, status=500)
+def scrape_floorsheet_ml(request, id):
+    """
+    Scrape the floorsheet for a specific company using the Sharesansar scraper.
+    """
+    try:
+        company = CompanyProfile.objects.get(id=id)
+        symbol = company.symbol
+
+        logger.info(f"Scraping floorsheet for {symbol} from Merolagani")
+        scraper = merolagani_scraper.MerolaganiFloorsheetScraper(headless=False)
+        floorsheet_data = scraper.run_scraper(symbol=symbol)
+        logger.info(f"Scraped {len(floorsheet_data)} floorsheet for {symbol} from Merolagani")
+        # Save to DB
+        store_floorsheet_to_db_ml(symbol, floorsheet_data)
+
+        return JsonResponse({'message': f"Successfully scraped floorsheet for {company.name}."})
+    except CompanyProfile.DoesNotExist:
+        return JsonResponse({'message': 'Company not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'message': f'Error occurred: {str(e)}'}, status=500)
+    
+def scrape_floorsheet_nepstock(request, id):
+    try:
+        company = CompanyProfile.objects.get(id=id)
+        symbol = company.symbol
+
+        # Step 1: Scrape
+        floorsheet_data = scrape_company_floorsheet_nepstock(symbol, headless=False)
+        logger.info(f"Scraped {len(floorsheet_data)} records for {symbol} from NepalStock")
+
+        # Step 2: Save to DB using unified function
+        print(floorsheet_data)
+        return JsonResponse({
+            "message": f"Scraped and saved {len(floorsheet_data)} records for {symbol}",
+            'records_scraped': len(floorsheet_data)
+        })
+    except CompanyProfile.DoesNotExist:
+        return JsonResponse({"error": f"Company with ID {id} not found."}, status=404)
+    except Exception as e:
+        logger.exception("Error scraping from NepalStock")
+        return JsonResponse({'error': str(e)}, status=500)
+    
+def empty_floorsheet(request, id):
+    """
+    Empty the floorsheet for a specific company.
+    """
+    try:
+        company = CompanyProfile.objects.get(id=id)
+        if request.method == 'POST':
+            FloorSheet.objects.filter(company=company).delete()
+            return redirect('floorsheet_list', id=id)
+        return render(request, 'stocks/delete_floorsheet.html', {'company': company})
+    except CompanyProfile.DoesNotExist:
+        return JsonResponse({'error': 'Company not found.'}, status=404)
+    except Exception as e:
+        logger.exception("Error emptying floorsheet")
+        return JsonResponse({'error': str(e)}, status=500)

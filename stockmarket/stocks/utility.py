@@ -157,13 +157,58 @@ def store_floorsheet_to_db_ss(symbol, floorsheet_data):
             )
             floorsheet_entry.save()
         except Exception as e:
-            logger.error(f"Failed to save record: {record}")
+            logger.error(f"Failed to save record: {transaction_id}")
     
     logger.info(f" Saved Floorsheet to DB: {symbol}")
     
+def store_floorsheet_to_db_ml(symbol, floorsheet_data):
+    try:
+        company = CompanyProfile.objects.get(symbol=symbol)
+    except CompanyProfile.DoesNotExist:
+        logger.error(f"Company with symbol '{symbol}' not found in database.")
+        return
+
+    for record in floorsheet_data:
+        try:
+            transaction_id = record["Transact. No."]
+            if FloorSheet.objects.filter(company=company, transaction_id=transaction_id).exists():
+                logger.info(f"⚠ Skipping existing record: {symbol} - {transaction_id}")
+                continue
+
+            floorsheet_entry = FloorSheet(
+                company=company,
+                date=record["Date"],
+                transaction_id=transaction_id,
+                buyer=record["Buyer"],
+                seller=record["Seller"],
+                quantity=record["Quantity"].replace(",", ""),
+                rate=record["Rate"].replace(",", ""),
+                amount=record["Amount"].replace(",", "")
+            )
+            floorsheet_entry.save()
+        except Exception as e:
+            logger.error(f"Failed to save record: {transaction_id} | Error: {e}")
+
+    logger.info(f"Saved Floorsheet data to DB for symbol: {symbol}")
 
 def safe_float(value):
     try:
         return float(value.replace(',', '').strip()) if value else None
     except Exception:
+        return None
+
+def get_latest_data_of_pricehistory(symbol):
+    """
+    Get the latest data of price history for a given symbol.
+    """
+    try:
+        company = CompanyProfile.objects.get(symbol=symbol)
+        latest_entry = PriceHistory.objects.filter(company=company).order_by('-date').first()
+        if latest_entry:
+            return latest_entry.date
+        else:
+            logger.warning(f"No price history found for {symbol}.")
+            return None
+    except CompanyProfile.DoesNotExist:
+        logger.error(f"Company with symbol '{symbol}' not found.")
         return None

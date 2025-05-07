@@ -23,5 +23,8 @@ urlpatterns = [
     path('scrape-company-merolagani/<int:id>/', views.scrpae_merolagani_pricehistory, name='scrape_price_merolagani'),
 
     path('floorsheet/<int:id>', views.list_floorsheet, name='floorsheet_list'),
-    path('floorsheet/<int:id>/scrape', views.scrape_floorsheet_ss, name='scrape_floorsheet_ss'),
+    path('empty-floorsheet/<int:id>', views.empty_floorsheet, name='empty_floorsheet'),
+    path('floorsheet/<int:id>/scrape-ss', views.scrape_floorsheet_ss, name='scrape_floorsheet_ss'),
+    path('floorsheet/<int:id>/scrape-ns', views.scrape_floorsheet_nepstock, name='scrape_floorsheet_ns'),
+    path('floorsheet/<int:id>/scrape-ml', views.scrape_floorsheet_ml, name='scrape_floorsheet_ml'),
 ]
