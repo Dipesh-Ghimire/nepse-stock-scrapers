@@ -5,6 +5,7 @@ from selenium.common.exceptions import NoAlertPresentException
 from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException
 
+from ..utility import get_latest_data_of_pricehistory
 import time
 from datetime import datetime
 import logging
@@ -32,7 +33,7 @@ class SharesansarScraper(BaseScraper):
                 EC.element_to_be_clickable((By.ID, "btn_cpricehistory"))
             )
             price_history_tab.click()
-            time.sleep(3)
+            time.sleep(1)
 
             keep_scraping = True
             while keep_scraping:
@@ -69,6 +70,11 @@ class SharesansarScraper(BaseScraper):
                             if max_records and len(self.records) >= max_records:
                                 keep_scraping = False
                                 break
+                            
+                            if get_latest_data_of_pricehistory(self.symbol) >= date_obj:
+                                keep_scraping = False
+                                logger.info("Latest data in DB is newer than scraped data, stopping.")
+                                break
                         except Exception as e:
                             logger.warning(f"Error parsing row: {e}")
 
@@ -80,7 +86,7 @@ class SharesansarScraper(BaseScraper):
                         if "disabled" in next_btn.get_attribute("class"):
                             break
                         self.driver.execute_script("arguments[0].click();", next_btn)
-                        time.sleep(2)
+                        time.sleep(1)
                     except NoSuchElementException:
                         logger.info("Next button not found, ending pagination.")
                         break
