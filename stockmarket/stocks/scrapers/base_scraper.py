@@ -26,7 +26,10 @@ class BaseScraper:
         options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36')
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
-        prefs = {"profile.default_content_setting_values.notifications": 2}
+        prefs = {"profile.managed_default_content_settings.images": 2,
+                "profile.default_content_setting_values.notifications": 2,
+                "profile.default_content_setting_values.stylesheets": 2,
+                "profile.default_content_setting_values.javascript": 1}
         options.add_experimental_option("prefs", prefs)
 
         service = Service(self.chromedriver_path)
