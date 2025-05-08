@@ -17,7 +17,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for price in price_history %}
+            {% for price in price_history|dictsortreversed:"date" %}
             <tr>
                 <td>{{ forloop.counter }}</td>
                 <td>{{ price.date }}</td>

@@ -34,7 +34,7 @@ class SharesansarScraper(BaseScraper):
             )
             price_history_tab.click()
             time.sleep(1)
-
+            latest_data = get_latest_data_of_pricehistory(self.symbol)
             keep_scraping = True
             while keep_scraping:
                 table = self.wait.until(
@@ -70,8 +70,7 @@ class SharesansarScraper(BaseScraper):
                             if max_records and len(self.records) >= max_records:
                                 keep_scraping = False
                                 break
-                            
-                            if get_latest_data_of_pricehistory(self.symbol) >= date_obj:
+                            if latest_data is not None and latest_data >= date_obj:
                                 keep_scraping = False
                                 logger.info("Latest data in DB is newer than scraped data, stopping.")
                                 break
