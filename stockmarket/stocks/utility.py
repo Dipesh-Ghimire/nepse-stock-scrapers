@@ -177,7 +177,7 @@ def store_floorsheet_to_db_ml(symbol, floorsheet_data):
 
             floorsheet_entry = FloorSheet(
                 company=company,
-                date=record["Date"],
+                date=try_parse_date(record["Date"]),
                 transaction_id=transaction_id,
                 buyer=record["Buyer"],
                 seller=record["Seller"],
