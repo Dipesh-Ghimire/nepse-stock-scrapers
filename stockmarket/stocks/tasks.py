@@ -1,8 +1,8 @@
 from celery import shared_task
-from .utility import save_price_history_to_db, save_price_history_to_db_ss, save_price_history_to_db_ml
+from .utility import save_price_history_to_db, save_price_history_to_db_ss, save_price_history_to_db_ml, store_floorsheet_to_db_ss, store_floorsheet_to_db_ml
 from .scrapers.sharesansar_scraper import SharesansarScraper
-from .scrapers.merolagani_scraper import MerolaganiScraper
-from .scrapers.nepstock_scraper import scrape_company_price_history_nepstock
+from .scrapers.merolagani_scraper import MerolaganiScraper, MerolaganiFloorsheetScraper
+from .scrapers.nepstock_scraper import scrape_company_price_history_nepstock, scrape_company_floorsheet_nepstock
 from .models import CompanyProfile
 
 import logging
@@ -45,3 +45,53 @@ def run_nepstock_pricehistory_scraper(self):
         save_price_history_to_db(symbol, price_history_data)
         logger.info(f"Celery: Data saved for {symbol}")
     return "Celery Task Executed"
+
+@shared_task(bind=True)
+def run_sharesansar_floorsheet_scraper(self):
+    logger.info("Celery Task Started: Sharesansar Floorsheet Scraper")
+    try:
+        symbols = CompanyProfile.objects.values_list('symbol', flat=True)
+        for symbol in symbols:
+            logger.info(f"Celery: Processing for {symbol}")
+            scraper = SharesansarScraper(symbol=symbol, headless=True)
+            floorsheet_data = scraper.fetch_floorsheet()
+            logger.info(f"Celery: Floorsheet Data Scraped for {symbol}")
+            store_floorsheet_to_db_ss(symbol, floorsheet_data)
+            logger.info(f"Celery: Data saved for {symbol}")
+        return "Celery Task Executed"
+    except Exception as e:
+        logger.error(f"Error in run_sharesansar_floorsheet_scraper: {e}")
+        return "Error in Celery Task: run_sharesansar_floorsheet_scraper"
+    
+@shared_task(bind=True)
+def run_merolagani_floorsheet_scraper(self):
+    logger.info("Celery Task Started: Merolagani Floorsheet Scraper")
+    try:
+        symbols = CompanyProfile.objects.values_list('symbol', flat=True)
+        for symbol in symbols:
+            logger.info(f"Celery: Processing for {symbol}")
+            scraper = MerolaganiFloorsheetScraper(headless=True)
+            floorsheet_data = scraper.run_scraper(symbol=symbol)
+            logger.info(f"Celery: Floorsheet Data Scraped for {symbol}")
+            store_floorsheet_to_db_ml(symbol, floorsheet_data)
+            logger.info(f"Celery: Data saved for {symbol}")
+        return "Celery Task Executed"
+    except Exception as e:
+        logger.error(f"Error in run_merolagani_floorsheet_scraper: {e}")
+        return "Error in Celery Task: run_merolagani_floorsheet_scraper"
+
+@shared_task(bind=True)
+def run_nepstock_floorsheet_scraper(self):
+    logger.info("Celery Task Started: Nepstock Floorsheet Scraper")
+    try:
+        symbols = CompanyProfile.objects.values_list('symbol', flat=True)
+        for symbol in symbols:
+            logger.info(f"Celery: Processing for {symbol}")
+            floorsheet_data = scrape_company_floorsheet_nepstock(symbol, headless=True)
+            logger.info(f"Celery: Floorsheet Data Scraped for {symbol}")
+            store_floorsheet_to_db_ss(symbol, floorsheet_data)
+            logger.info(f"Celery: Data saved for {symbol}")
+        return "Celery Task Executed"
+    except Exception as e:
+        logger.error(f"Error in run_nepstock_floorsheet_scraper: {e}")
+        return "Error in Celery Task: run_nepstock_floorsheet_scraper"
