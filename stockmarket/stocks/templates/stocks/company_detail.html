@@ -27,52 +27,6 @@
                     <p>{{ company.description }}</p>
                 </div>
 
-                {% comment %} <div class="d-flex flex-wrap gap-2 mt-4">
-                    <!-- View Price History Button -->
-                    <a href="{% url 'price_history' company.id %}" class="btn btn-primary">
-                        View Price History
-                    </a>
-
-                    <!-- View Floorsheet Button -->
-                    <a href="{% url 'floorsheet_list' company.id %}" class="btn btn-primary">
-                        View Floorsheet
-                    </a>
-
-                    <!-- Scrape Latest Prices Button -->
-                    <button id="scrape-button" class="btn btn-success">
-                        Scrape Latest Prices from ShareSansar
-                    </button>
-
-                    <!-- Scrape Latest Prices Button -->
-                    <button id="scrape-nepstock" class="btn btn-success">
-                        Scrape Latest Prices from NepalStock
-                    </button>
-
-                    <!-- Scrape Latest Prices Button -->
-                    <button id="scrape-merolagani" class="btn btn-success">
-                        Scrape Latest Prices from Merolagani
-                    </button>
-
-                    <!-- Scrape Floorsheet Button -->
-                    <button id="scrape-floorsheet-ss" class="btn btn-secondary">
-                        Scrape Floorsheet from Sharesansar
-                    </button>
-
-                    <!-- Scrape Floorsheet Button -->
-                    <button id="scrape-floorsheet-ns" class="btn btn-secondary">
-                        Scrape Floorsheet from Sharesansar
-                    </button>
-
-                    <!-- Scrape Floorsheet Button -->
-                    <button id="scrape-floorsheet-ml" class="btn btn-secondary">
-                        Scrape Floorsheet from Sharesansar
-                    </button>
-
-                    <!-- Predict Future Prices Button -->
-                    <button id="predict-button" class="btn btn-warning">
-                        Predict Future Prices
-                    </button>
-                </div> {% endcomment %}
                 <div class="row mt-4">
                     <!-- Price History and Floorsheet Links -->
                     <div class="col-md-12 mb-3">
@@ -152,80 +106,53 @@ function showAlert(message, type = 'success') {
 }
     
 $(document).ready(function(){
-    $('#scrape-button').click(function(){
+    function showLoader() {
+        $('#fullscreen-loader').removeClass('d-none');
+    }
+    
+    function hideLoader() {
+        $('#fullscreen-loader').addClass('d-none');
+    }
+    
+
+    function handleScrapeAjax(url) {
+        showLoader();
         $.ajax({
-            url: '{% url "scrape_price_sharesansar" company.id %}',
+            url: url,
             method: 'GET',
             success: function(response) {
                 showAlert(response.message, 'success');
             },
             error: function(error) {
                 showAlert('Error occurred while scraping.', 'danger');
+            },
+            complete: function() {
+                hideLoader();
             }
         });
+    }
+
+    $('#scrape-button').click(function(){
+        handleScrapeAjax('{% url "scrape_price_sharesansar" company.id %}');
     });
     $('#scrape-nepstock').click(function(){
-        $.ajax({
-            url: '{% url "scrape_price_nepstock" company.id %}',
-            method: 'GET',
-            success: function(response) {
-                showAlert(response.message, 'success');
-            },
-            error: function(error) {
-                showAlert('Error occurred while scraping.', 'danger');
-            }
-        });
+        handleScrapeAjax('{% url "scrape_price_nepstock" company.id %}');
     });
     $('#scrape-merolagani').click(function(){
-        $.ajax({
-            url: '{% url "scrape_price_merolagani" company.id %}',
-            method: 'GET',
-            success: function(response) {
-                showAlert(response.message, 'success');
-            },
-            error: function(error) {
-                showAlert('Error occurred while scraping.', 'danger');
-            }
-        });
+        handleScrapeAjax('{% url "scrape_price_merolagani" company.id %}');
     });
     $('#scrape-floorsheet-ss').click(function(){
-        $.ajax({
-            url: '{% url "scrape_floorsheet_ss" company.id %}',
-            method: 'GET',
-            success: function(response) {
-                showAlert(response.message, 'success');
-            },
-            error: function(error) {
-                showAlert('Error occurred while scraping.', 'danger');
-            }
-        });
+        handleScrapeAjax('{% url "scrape_floorsheet_ss" company.id %}');
     });
     $('#scrape-floorsheet-ml').click(function(){
-        $.ajax({
-            url: '{% url "scrape_floorsheet_ml" company.id %}',
-            method: 'GET',
-            success: function(response) {
-                showAlert(response.message, 'success');
-            },
-            error: function(error) {
-                showAlert('Error occurred while scraping.', 'danger');
-            }
-        });
+        handleScrapeAjax('{% url "scrape_floorsheet_ml" company.id %}');
     });
     $('#scrape-floorsheet-ns').click(function(){
-        $.ajax({
-            url: '{% url "scrape_floorsheet_ns" company.id %}',
-            method: 'GET',
-            success: function(response) {
-                showAlert(response.message, 'success');
-            },
-            error: function(error) {
-                showAlert('Error occurred while scraping.', 'danger');
-            }
-        });
+        handleScrapeAjax('{% url "scrape_floorsheet_ns" company.id %}');
     });
 
     $('#predict-button').click(function(){
+        showLoader();
         $.ajax({
             url: '/predict-future-prices/{{ company.id }}/',
             method: 'GET',
@@ -241,7 +168,7 @@ $(document).ready(function(){
                             </thead>
                             <tbody>
                     `;
-    
+
                     response.predictions.forEach(function(prediction) {
                         tableHtml += `
                             <tr>
@@ -250,12 +177,12 @@ $(document).ready(function(){
                             </tr>
                         `;
                     });
-    
+
                     tableHtml += `
                             </tbody>
                         </table>
                     `;
-    
+
                     $('#result').html(tableHtml);
                 } else {
                     $('#result').html('<p class="text-danger">No predictions available.</p>');
@@ -264,10 +191,13 @@ $(document).ready(function(){
             error: function(xhr, status, error) {
                 console.log(xhr.responseText);
                 $('#result').html('<p class="text-danger">Error occurred: ' + xhr.responseText + '</p>');
+            },
+            complete: function() {
+                hideLoader();
             }
         });
     });
-    
 });
+
 </script>
 {% endblock %}
