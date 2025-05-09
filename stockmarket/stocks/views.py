@@ -2,6 +2,7 @@ import pandas as pd
 from statsmodels.tsa.arima.model import ARIMA
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
+from django.core.paginator import Paginator
 
 from .scrapers import merolagani_scraper
 from .scrapers import sharesansar_scraper
@@ -97,8 +98,13 @@ def price_history(request, id):
     return render(request, 'stocks/price_history.html', {'company': company, 'price_history': price_history})
 
 def price_history_list(request):
-    prices = PriceHistory.objects.select_related('company').order_by('-date')
-    return render(request, 'stocks/price_history_list.html', {'prices': prices})
+    price_list = PriceHistory.objects.select_related('company').order_by('-date')
+    paginator = Paginator(price_list, 25)  # Show 25 records per page
+
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'stocks/price_history_list.html', {'page_obj': page_obj,})
 
 def company_list(request):
     companies = CompanyProfile.objects.all()
@@ -246,7 +252,7 @@ def scrape_floorsheet_ml(request, id):
         symbol = company.symbol
 
         logger.info(f"Scraping floorsheet for {symbol} from Merolagani")
-        scraper = merolagani_scraper.MerolaganiFloorsheetScraper(headless=False)
+        scraper = merolagani_scraper.MerolaganiFloorsheetScraper(headless=True)
         floorsheet_data = scraper.run_scraper(symbol=symbol)
         logger.info(f"Scraped {len(floorsheet_data)} floorsheet for {symbol} from Merolagani")
         # Save to DB
