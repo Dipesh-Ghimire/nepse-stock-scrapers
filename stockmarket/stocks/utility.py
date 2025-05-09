@@ -47,7 +47,7 @@ def save_price_history_to_db(symbol, price_history_data):
                 close_price=safe_float(close_price)
             )
             price_entry.save()
-            logger.info(f" Saved: {symbol} - {date_obj}")
+            # logger.info(f" Saved: {symbol} - {date_obj}")
 
         except Exception as e:
             logger.error(f" Error saving record: {record}, Error: {e}")
@@ -99,7 +99,7 @@ def save_price_history_to_db_ml(symbol, price_history_data):
                 close_price=close_price,
             )
             price_entry.save()
-            logger.info(f" Saved: {symbol} - {date_str}")
+            # logger.info(f" Saved: {symbol} - {date_str}")
         except Exception as e:
             logger.error(f" Failed to save record: {record}")
 
@@ -127,7 +127,7 @@ def save_price_history_to_db_ss(symbol, price_history_data):
                 close_price=float(record["Close"].replace(",", ""))
             )
             price_entry.save()
-            logger.info(f" Saved: {symbol} - {record['Date']}")
+            # logger.info(f" Saved: {symbol} - {record['Date']}")
         except Exception as e:
             logger.error(f" Failed to save record: {record}")
 
