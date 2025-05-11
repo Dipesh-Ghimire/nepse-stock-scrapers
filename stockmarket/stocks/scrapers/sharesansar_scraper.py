@@ -14,7 +14,7 @@ from .base_scraper import BaseScraper
 
 logger = logging.getLogger('stocks')
 
-class SharesansarScraper(BaseScraper):
+class SharesansarPriceScraper(BaseScraper):
     def __init__(self, symbol, headless=False):
         super().__init__(headless=headless)
         self.symbol = symbol
@@ -98,6 +98,13 @@ class SharesansarScraper(BaseScraper):
         logger.info(f"Scraped {len(self.records)} records for {self.symbol} from ShareSansar")
         return self.records
 
+class SharesansarFloorsheetScraper(BaseScraper):
+    def __init__(self, symbol, headless=False):
+        super().__init__(headless=headless)
+        self.symbol = symbol
+        self.base_url = f"https://www.sharesansar.com/company/{self.symbol}"
+        self.wait = WebDriverWait(self.driver, self.timeout)
+    
     def fetch_floorsheet(self):
         floorsheet = []
         logger.info(f"Started Scraping floorsheet for {self.symbol} from ShareSansar")

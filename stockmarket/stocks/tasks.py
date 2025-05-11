@@ -1,6 +1,6 @@
 from celery import shared_task
 from .utility import save_price_history_to_db, save_price_history_to_db_ss, save_price_history_to_db_ml, store_floorsheet_to_db_ss, store_floorsheet_to_db_ml
-from .scrapers.sharesansar_scraper import SharesansarScraper
+from .scrapers.sharesansar_scraper import SharesansarPriceScraper, SharesansarFloorsheetScraper
 from .scrapers.merolagani_scraper import MerolaganiScraper, MerolaganiFloorsheetScraper
 from .scrapers.nepstock_scraper import scrape_company_price_history_nepstock, scrape_company_floorsheet_nepstock
 from .models import CompanyProfile
@@ -14,7 +14,7 @@ def run_sharesansar_pricehistory_scraper(self):
     symbols = CompanyProfile.objects.values_list('symbol', flat=True)
     for symbol in symbols:
         logger.info(f"Celery: Processing for {symbol}")
-        scraper = SharesansarScraper(symbol=symbol, headless=True)
+        scraper = SharesansarPriceScraper(symbol=symbol, headless=True)
         data = scraper.fetch_price_history()
         logger.info(f"Celery: Data Scraped for {symbol}")
         save_price_history_to_db_ss(symbol, data)
@@ -53,7 +53,7 @@ def run_sharesansar_floorsheet_scraper(self):
         symbols = CompanyProfile.objects.values_list('symbol', flat=True)
         for symbol in symbols:
             logger.info(f"Celery: Processing for {symbol}")
-            scraper = SharesansarScraper(symbol=symbol, headless=True)
+            scraper = SharesansarFloorsheetScraper(symbol=symbol, headless=True)
             floorsheet_data = scraper.fetch_floorsheet()
             logger.info(f"Celery: Floorsheet Data Scraped for {symbol}")
             store_floorsheet_to_db_ss(symbol, floorsheet_data)

@@ -119,7 +119,7 @@ def scrape_sharesansar_pricehistory(request, id):
         company = CompanyProfile.objects.get(id=id)
         symbol = company.symbol
 
-        scraper = sharesansar_scraper.SharesansarScraper(symbol=symbol, headless=True)
+        scraper = sharesansar_scraper.SharesansarPriceScraper(symbol=symbol, headless=True)
         data = scraper.fetch_price_history()
         logger.info(f"Scraped {len(data)} records for {symbol} from Sharesansar")
 
@@ -231,7 +231,7 @@ def scrape_floorsheet_ss(request, id):
         company = CompanyProfile.objects.get(id=id)
         symbol = company.symbol
 
-        scraper = sharesansar_scraper.SharesansarScraper(symbol=symbol, headless=True)
+        scraper = sharesansar_scraper.SharesansarFloorsheetScraper(symbol=symbol, headless=True)
         floorsheet_data = scraper.fetch_floorsheet()
         logger.info(f"Scraped {len(floorsheet_data)} floorsheet for {symbol} from Sharesansar")
 
