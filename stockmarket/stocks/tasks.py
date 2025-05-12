@@ -1,7 +1,7 @@
 from celery import shared_task
-from .utility import save_price_history_to_db, save_price_history_to_db_ss, save_price_history_to_db_ml, store_floorsheet_to_db_ss, store_floorsheet_to_db_ml
+from .utility import save_price_history_to_db, save_price_history_to_db_ss, save_price_history_to_db_ml, store_floorsheet_to_db_ss, store_floorsheet_to_db_ml, store_news_to_db_ml
 from .scrapers.sharesansar_scraper import SharesansarPriceScraper, SharesansarFloorsheetScraper
-from .scrapers.merolagani_scraper import MerolaganiScraper, MerolaganiFloorsheetScraper
+from .scrapers.merolagani_scraper import MerolaganiScraper, MerolaganiFloorsheetScraper, MerolaganiNewsScraper
 from .scrapers.nepstock_scraper import scrape_company_price_history_nepstock, scrape_company_floorsheet_nepstock
 from .models import CompanyProfile
 
@@ -95,3 +95,27 @@ def run_nepstock_floorsheet_scraper(self):
     except Exception as e:
         logger.error(f"Error in run_nepstock_floorsheet_scraper: {e}")
         return "Error in Celery Task: run_nepstock_floorsheet_scraper"
+    
+@shared_task(bind=True)
+def run_merolagani_news_scraper(self):
+    logger.info("Celery Task Started: Merolagani News Scraper")
+
+    scraper = None
+    try:
+        scraper = MerolaganiNewsScraper(headless=True, max_records=8)
+        records = scraper.fetch_news()
+        logger.info(f"Celery: Fetched {len(records)} news items from listing page")
+
+        detailed_records = scraper._extract_news_body(records=records)
+        logger.info("Celery: News bodies extracted")
+
+        store_news_to_db_ml(news_data=detailed_records)
+        logger.info("Celery: News successfully stored to DB")
+
+        return "Celery: Merolagani news scraping completed successfully"
+    except Exception as e:
+        logger.exception("Celery: Error during Merolagani news scraping task:")
+        raise self.retry(exc=e, countdown=60, max_retries=3)  # Optional retry mechanism
+    finally:
+        if scraper:
+            scraper.close()
