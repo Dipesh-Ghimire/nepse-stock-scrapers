@@ -3,8 +3,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
 from django.core.paginator import Paginator
-from django.urls import reverse
-from django.http import HttpResponseRedirect
+from django.contrib import messages
 
 from .scrapers import merolagani_scraper
 from .scrapers import sharesansar_scraper
@@ -288,11 +287,19 @@ def scrape_floorsheet_nepstock(request, id):
         return JsonResponse({'error': str(e)}, status=500)
 
 def scrape_news_ml(request):
-    scraper = merolagani_scraper.MerolaganiNewsScraper(headless=False, max_records=8)
-    records = scraper.fetch_news()
-    record_with_body = scraper._extract_news_body(records=records)
-    store_news_to_db_ml(news_data=record_with_body)
-    scraper.close()
+    scraper = None
+    try:
+        scraper = merolagani_scraper.MerolaganiNewsScraper(headless=False, max_records=8)
+        records = scraper.fetch_news()
+        record_with_body = scraper._extract_news_body(records=records)
+        store_news_to_db_ml(news_data=record_with_body)
+        messages.success(request, "News scraped and stored successfully.")
+    except Exception as e:
+        logger.exception("Error while scraping Merolagani news:")
+        messages.error(request, f"⚠️ An error occurred during scraping: {e}")
+    finally:
+        if scraper:
+            scraper.close()
     return render(request, 'stocks/company_news_list.html', {'news': CompanyNews.objects.all()})
 
 def empty_floorsheet(request, id):
