@@ -17,9 +17,10 @@ class CompanyProfile(models.Model):
         return self.name
 
 class CompanyNews(models.Model):
-    company = models.ForeignKey(CompanyProfile, on_delete=models.CASCADE)
+    company = models.ForeignKey(CompanyProfile, on_delete=models.CASCADE, null=True)
+    news_url = models.URLField(unique=True)
     news_title = models.CharField(max_length=255)
-    news_date = models.DateField()
+    news_date = models.DateTimeField()
     news_image = models.URLField(null=True, blank=True)
     news_body = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)

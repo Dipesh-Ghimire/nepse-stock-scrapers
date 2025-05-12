@@ -8,10 +8,11 @@
     <a href="{% url 'add_company_news' %}" class="btn btn-success">
         + Add News
     </a>
+    <button id="scrape-merolagani" class="btn btn-outline-success scrape-btn">Scrape Latest News ML</button>
 </div>
 
 <div class="list-group">
-    {% for article in news %}
+    {% for article in news|dictsortreversed:"news_date" %}
     <a href="{% url 'company_news_detail' article.id %}" class="list-group-item list-group-item-action">
         <div class="d-flex w-100 justify-content-between">
             <h5 class="mb-1">{{ article.news_title }}</h5>
@@ -23,5 +24,55 @@
     <p>No news articles available.</p>
     {% endfor %}
 </div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+
+function showAlert(message, type = 'success') {
+    const alertBox = $('#alert-box');
+    
+    alertBox
+        .removeClass('d-none alert-success alert-danger alert-warning alert-info')
+        .addClass('alert-' + type)
+        .html(message)
+        .fadeIn();
+
+    setTimeout(() => {
+        alertBox.fadeOut(() => {
+            alertBox.addClass('d-none').html('');
+        });
+    }, 8000);
+}
+    
+$(document).ready(function(){
+    function showLoader() {
+        $('#fullscreen-loader').removeClass('d-none');
+    }
+    function hideLoader() {
+        $('#fullscreen-loader').addClass('d-none');
+    }
+
+    function handleScrapeAjax(url) {
+        showLoader();
+        $.ajax({
+            url: url,
+            method: 'GET',
+            success: function(response) {
+                showAlert(response.message, 'success');
+            },
+            error: function(error) {
+                showAlert('Error occurred while scraping.', 'danger');
+            },
+            complete: function() {
+                hideLoader();
+            }
+        });
+    }
+
+    $('#scrape-merolagani').click(function(){
+        handleScrapeAjax('{% url "scrape_news_ml" %}');
+    });
+});
+
+</script>
 
 {% endblock %}

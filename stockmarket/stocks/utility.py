@@ -1,5 +1,7 @@
 from datetime import datetime
-from stocks.models import CompanyProfile, PriceHistory, FloorSheet
+from stocks.models import CompanyProfile, PriceHistory, FloorSheet, CompanyNews
+from django.utils import timezone
+from dateutil.parser import parse as parse_datetime
 import logging
 
 logger = logging.getLogger("stocks")
@@ -212,3 +214,28 @@ def get_latest_data_of_pricehistory(symbol):
     except CompanyProfile.DoesNotExist:
         logger.error(f"Company with symbol '{symbol}' not found.")
         return None
+
+def store_news_to_db_ml(news_data):
+    for record in news_data:
+        try:
+            # Skip if URL already exists
+            if CompanyNews.objects.filter(news_url=record["url"]).exists():
+                logger.info(f"⚠ Skipping existing news: {record['url']}")
+                continue
+            news_entry = CompanyNews(
+                company=None,
+                news_url=record["url"],
+                news_title=record["title"],
+                news_date=record["date"],
+                news_image=record.get("image"),
+                news_body=record.get("body", "")
+            )
+            news_entry.save()
+            logger.info(f"Saved news: {record['title']}")
+
+        except Exception as e:
+            logger.error(f"Failed to save news: {record["title"]} | Error: {e}")
+
+def get_latest_news_date():
+    latest_news = CompanyNews.objects.order_by('-news_date').first()
+    return latest_news.news_date if latest_news else None

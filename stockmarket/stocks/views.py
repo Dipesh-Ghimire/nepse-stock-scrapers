@@ -3,11 +3,13 @@ from statsmodels.tsa.arima.model import ARIMA
 from django.shortcuts import render,redirect
 from django.http import JsonResponse
 from django.core.paginator import Paginator
+from django.urls import reverse
+from django.http import HttpResponseRedirect
 
 from .scrapers import merolagani_scraper
 from .scrapers import sharesansar_scraper
 from .scrapers.nepstock_scraper import scrape_company_price_history_nepstock, scrape_company_floorsheet_nepstock
-from .utility import save_price_history_to_db_ml, save_price_history_to_db, save_price_history_to_db_ss, store_floorsheet_to_db_ss, store_floorsheet_to_db_ml
+from .utility import save_price_history_to_db_ml, save_price_history_to_db, save_price_history_to_db_ss, store_floorsheet_to_db_ss, store_floorsheet_to_db_ml, store_news_to_db_ml
 from .forms import CompanyNewsForm, CompanyProfileForm
 
 from .models import CompanyNews, CompanyProfile, PriceHistory, FloorSheet
@@ -57,7 +59,7 @@ def predict_future_prices(request, id):
             return JsonResponse({'message': 'Not enough data to make a prediction. Need at least 10 data points.'}, status=400)
 
         # Fit the ARIMA model (you can adjust the order depending on your data)
-        model = ARIMA(df['close_price'], order=(5, 1, 0))  # Example: ARIMA(5,1,0)
+        model = ARIMA(df['close_price'], order=(20, 1, 0))  # Example: ARIMA(5,1,0)
         model_fit = model.fit()
 
         # Forecast the next 5 days
@@ -284,7 +286,15 @@ def scrape_floorsheet_nepstock(request, id):
     except Exception as e:
         logger.exception("Error scraping from NepalStock")
         return JsonResponse({'error': str(e)}, status=500)
-    
+
+def scrape_news_ml(request):
+    scraper = merolagani_scraper.MerolaganiNewsScraper(headless=False, max_records=8)
+    records = scraper.fetch_news()
+    record_with_body = scraper._extract_news_body(records=records)
+    store_news_to_db_ml(news_data=record_with_body)
+    scraper.close()
+    return render(request, 'stocks/company_news_list.html', {'news': CompanyNews.objects.all()})
+
 def empty_floorsheet(request, id):
     """
     Empty the floorsheet for a specific company.
