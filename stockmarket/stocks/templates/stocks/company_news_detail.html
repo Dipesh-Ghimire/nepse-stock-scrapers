@@ -6,14 +6,66 @@
 <div class="container mt-4">
     <div class="card">
         {% if article.news_image %}
-        <img src="{{ article.news_image }}" class="card-img-top img-fluid" alt="News Image" style="max-height: 300px; object-fit: cover;">
+        <div class="article-image-container">
+          <img src="{{ article.news_image }}" 
+               alt="{{ article.news_title }}"
+               class="article-image">
+        </div>
         {% endif %}
         <div class="card-body">
+            <a href="{% url 'company_news_list' %}" class="btn btn-secondary mt-3">Back to News List</a>
             <h3 class="card-title">{{ article.news_title }}</h3>
             <p class="card-text"><small class="text-muted">{{ article.news_date }}</small></p>
-            <p class="card-text">{{ article.news_body }}</p>
-            <a href="{% url 'company_news_list' %}" class="btn btn-primary mt-3">Back to News List</a>
+            <p class="card-text" style="font-size: clamp(1rem, 1.1vw + 0.8rem, 1.2rem); line-height: 1.7;">{{ article.news_body|truncatewords:50 }}</p>
+            {% if article.news_url %}
+            <a href="{{ article.news_url }}" class="btn btn-primary mt-3" target="_blank">
+                पूरा समाचार पढ्नुहोस्
+            </a>
+            {% endif %}
         </div>
     </div>
 </div>
+<style>
+.news-article {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.article-image-container {
+  height: 240px;
+  padding: 12px;
+}
+
+.article-image {
+  width: 40%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 4px;
+  background: #f9fafb;
+}
+
+.article-body {
+  padding: 0 20px 20px;
+}
+
+.meta {
+  margin: 10px 0;
+  color: #6b7280;
+}
+
+.read-btn {
+  display: inline-flex;
+  align-items: center;
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+  gap: 4px;
+}
+
+.read-btn:hover {
+  text-decoration: underline;
+}
+</style>
 {% endblock %}
