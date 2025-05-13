@@ -9,6 +9,7 @@
         + Add News
     </a>
     <button id="scrape-merolagani" class="btn btn-outline-success scrape-btn">Scrape Latest News ML</button>
+    <button id="scrape-sharesansar" class="btn btn-outline-success scrape-btn">Scrape Latest News SS</button>
 </div>
 
 <div class="list-group">
@@ -70,6 +71,9 @@ $(document).ready(function(){
 
     $('#scrape-merolagani').click(function(){
         handleScrapeAjax('{% url "scrape_news_ml" %}');
+    });
+    $('#scrape-sharesansar').click(function(){
+        handleScrapeAjax('{% url "scrape_news_ss" %}');
     });
 });
 
