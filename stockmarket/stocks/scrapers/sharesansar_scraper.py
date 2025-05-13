@@ -1,9 +1,11 @@
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoAlertPresentException
+from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException
 from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException
+from ..models import CompanyNews
+from dateutil import parser as date_parser
 
 from ..utility import get_latest_data_of_pricehistory
 import time
@@ -172,3 +174,171 @@ class SharesansarFloorsheetScraper(BaseScraper):
 
         logger.info(f"Scraped {len(floorsheet)} floorsheet records for {self.symbol} from ShareSansar")
         return floorsheet
+    
+class SharesansarNewsScraper(BaseScraper):
+    def __init__(self, headless=False, max_records=9999):
+        super().__init__(headless=headless)
+        self.base_url = "https://www.sharesansar.com/category/latest"
+        self.wait = WebDriverWait(self.driver, self.timeout)
+        self.max_records = max_records
+        self.records = []
+
+    def _close_ads(self):
+        try:
+            # Wait a very short time for the ad to appear
+            close_button = WebDriverWait(self.driver, 0.5).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "button.btn-red[data-dismiss='modal']"))
+            )
+            close_button.click()
+            print("[INFO] Ad closed.")
+        except TimeoutException:
+            # Ad not present, ignore silently
+            pass
+        except (ElementClickInterceptedException, NoSuchElementException) as e:
+            print(f"[WARN] Failed to close ad: {e}")
+
+    def fetch_news(self):
+        self.records = []
+        logger.info("Started scraping news from ShareSansar")
+
+        try:
+            self.driver.get(self.base_url)
+            keep_scraping = True
+
+            while keep_scraping:
+                # Scrape news list
+                news_list = self.scrape_news_list()
+                logger.info(f"Scraped {len(news_list)} news items from the news list page.")
+                if not news_list:
+                    logger.info("No new news found on this page.")
+                    break
+
+                # Loop over each news item and scrape its details
+                for news in news_list:
+                    news_url = news["news_url"]
+                    if self.is_news_scraped(news_url):
+                        logger.info(f"Skipping already scraped news: {news_url}")
+                        continue
+
+                    news_body, news_image, news_date = self.scrape_news_details(news_url)
+                    news_record = {
+                            "news_url": news_url,
+                            "news_title": news["news_title"],
+                            "news_date": news_date,
+                            "news_body": news_body,
+                            "news_image": news_image
+                        }
+                    self.records.append(news_record)
+
+                    if len(self.records) >= self.max_records:
+                        keep_scraping = False
+                        break
+
+                # Click 'Next' to navigate to the next page
+                if keep_scraping:
+                    keep_scraping = self.paginate()
+
+        except Exception as e:
+            logger.error(f"Error during scraping: {e}")
+        finally:
+            self.driver.quit()
+
+        logger.info(f"Scraped {len(self.records)} news articles.")
+        return self.records
+
+    def scrape_news_list(self):
+        news_list = []
+        try:
+            # Wait for the news section to load
+            news_section = self.wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".featured-news-list")))
+            # iternate until max_records
+            for item in news_section[:self.max_records]:
+                try:
+                    title_element = item.find_element(By.CSS_SELECTOR, "h4.featured-news-title")
+                    link_element = item.find_element(By.TAG_NAME, "a")
+                    # date_element = item.find_element(By.CSS_SELECTOR, "span.text-org")
+                    date_element = WebDriverWait(self.driver, 1).until(EC.presence_of_element_located((By.CSS_SELECTOR, "span.text-org")))
+
+                    news_url = link_element.get_attribute("href")
+                    news_title = title_element.text.strip()
+                    news_date = date_element.text.strip()
+
+                    logger.info(f"News Title: {news_title}")
+                    # Parse the date (e.g., "Monday, May 12, 2025")
+                    news_date_obj = datetime.strptime(news_date, "%A, %B %d, %Y").date()
+
+                    news_list.append({
+                        "news_url": news_url,
+                        "news_title": news_title,
+                        "news_date": news_date_obj
+                    })
+                except Exception as e:
+                    logger.warning(f"Error scraping news item: {e}")
+        except Exception as e:
+            logger.error(f"Error scraping news list: {e}")
+        return news_list
+
+    def scrape_news_details(self, news_url):
+        news_body = None
+        news_image = None
+        news_date = None
+
+        try:
+            self.driver.get(news_url)
+            self._close_ads()  # Close any ads that may appear
+            content_section = self.wait.until(EC.presence_of_element_located((By.ID, "newsdetail-content")))
+            news_body = content_section.text.strip()
+            # ✅ Try finding image in <figure class="newsdetail">
+            try:
+                image_element = self.driver.find_element(By.CSS_SELECTOR, "figure.newsdetail img")
+                news_image = image_element.get_attribute("src")
+            except NoSuchElementException:
+                # ✅ If not found, try finding image inside #newsdetail-content
+                try:
+                    image_element = content_section.find_element(By.TAG_NAME, "img")
+                    news_image = image_element.get_attribute("src")
+                except NoSuchElementException:
+                    logger.info(f"No image found for {news_url}")
+
+            try:
+                date_element = self.driver.find_element(By.CSS_SELECTOR, ".margin-bottom-10 h5")
+                date_text = date_element.text.strip()
+
+                # Example text: "Tue, May 13, 2025 10:20 AM on Latest, Corporate"
+                date_part = date_text.split(" on ")[0].strip()  # Take only "Tue, May 13, 2025 11:14 AM"
+                news_date = date_parser.parse(date_part)
+            except Exception as e:
+                logger.warning(f"No date found or parsing error at {news_url}: {e}")
+
+
+
+        except Exception as e:
+            logger.warning(f"Error scraping news details from {news_url}: {e}")
+
+        return news_body, news_image, news_date
+
+    def is_news_scraped(self, news_url):
+        # Check if news URL is already scraped and exists in the database
+        return CompanyNews.objects.filter(news_url=news_url).exists()
+
+    def paginate(self):
+        try:
+            next_button = self.driver.find_element(By.CSS_SELECTOR, "ul.pagination li.page-item a")
+            next_url = next_button.get_attribute("href")
+            if next_url:
+                self.driver.get(next_url)
+                time.sleep(2)
+                return True
+            else:
+                return False
+        except NoSuchElementException:
+            logger.info("No more pages to scrape.")
+            return False
+
+if __name__== "__main__":
+    news_scraper = SharesansarNewsScraper(headless=False, max_records=2)
+    news_records = news_scraper.fetch_news()
+    news_scraper.close()
+    for record in news_records:
+        print(f"Title: {record.news_title}, URL: {record.news_url}, Date: {record.news_date}")
+    
