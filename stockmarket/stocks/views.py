@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 from statsmodels.tsa.arima.model import ARIMA
 from django.shortcuts import render,redirect
@@ -8,7 +9,7 @@ from django.contrib import messages
 from .scrapers import merolagani_scraper
 from .scrapers import sharesansar_scraper
 from .scrapers.nepstock_scraper import scrape_company_price_history_nepstock, scrape_company_floorsheet_nepstock
-from .utility import save_price_history_to_db_ml, save_price_history_to_db, save_price_history_to_db_ss, store_floorsheet_to_db_ss, store_floorsheet_to_db_ml, store_news_to_db_ml
+from .utility import save_price_history_to_db_ml, save_price_history_to_db, save_price_history_to_db_ss, store_floorsheet_to_db_ss, store_floorsheet_to_db_ml, store_news_to_db_ml, store_news_to_db_ss
 from .forms import CompanyNewsForm, CompanyProfileForm
 
 from .models import CompanyNews, CompanyProfile, PriceHistory, FloorSheet
@@ -317,3 +318,16 @@ def empty_floorsheet(request, id):
     except Exception as e:
         logger.exception("Error emptying floorsheet")
         return JsonResponse({'error': str(e)}, status=500)
+    
+def scrape_news_ss(request):
+    try:
+        news_scraper = sharesansar_scraper.SharesansarNewsScraper(headless=False, max_records=2)
+        news_records = news_scraper.fetch_news()
+        news_scraper.close()
+        store_news_to_db_ss(news_records)
+    except Exception as e:
+        logger.exception("Error while scraping Sharesansar news:")
+        messages.error(request, f"⚠️ An error occurred during scraping: {e}")
+    finally:
+        news_scraper.close()
+    return render(request, 'stocks/company_news_list.html', {'news': CompanyNews.objects.all()})

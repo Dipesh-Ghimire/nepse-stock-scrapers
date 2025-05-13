@@ -29,4 +29,5 @@ urlpatterns = [
     path('floorsheet/<int:id>/scrape-ml', views.scrape_floorsheet_ml, name='scrape_floorsheet_ml'),
 
     path('scrape-news-merolagani',views.scrape_news_ml, name='scrape_news_ml'),
+    path('scrape-news-sharesansar',views.scrape_news_ss, name='scrape_news_ss'),
 ]

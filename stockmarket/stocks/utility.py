@@ -239,3 +239,23 @@ def store_news_to_db_ml(news_data):
 def get_latest_news_date():
     latest_news = CompanyNews.objects.order_by('-news_date').first()
     return latest_news.news_date if latest_news else None
+
+def store_news_to_db_ss(news_data):
+    for record in news_data:
+        try:
+            news_url = record["news_url"]
+            if CompanyNews.objects.filter(news_url=news_url).exists():
+                logger.info(f"⚠ Skipping existing news: {record['news_url']}")
+                continue
+            news_entry = CompanyNews(
+                company=None,
+                news_url=record["news_url"],
+                news_title=record["news_title"],
+                news_date=record["news_date"],
+                news_image=record.get("news_image"),
+                news_body=record.get("news_body", "")
+            )
+            news_entry.save()
+            logger.info(f"Saved news: {record['news_title']}")
+        except Exception as e:
+            logger.error(f"Failed to save news: {record['news_title']} | Error: {e}")
