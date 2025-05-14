@@ -6,8 +6,9 @@ from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException
 from ..models import CompanyNews
 from dateutil import parser as date_parser
+from django.utils.timezone import make_aware, is_naive
 
-from ..utility import get_latest_data_of_pricehistory
+from ..utility import get_latest_data_of_pricehistory, get_latest_ss_news_date
 import time
 from datetime import datetime
 import logging
@@ -182,6 +183,7 @@ class SharesansarNewsScraper(BaseScraper):
         self.wait = WebDriverWait(self.driver, self.timeout)
         self.max_records = max_records
         self.records = []
+        self.stop_flag = False
 
     def _close_ads(self):
         try:
@@ -205,7 +207,8 @@ class SharesansarNewsScraper(BaseScraper):
             self.driver.get(self.base_url)
             keep_scraping = True
 
-            while keep_scraping:
+            latest_db_date = get_latest_ss_news_date()
+            while keep_scraping and not self.stop_flag:
                 # Scrape news list
                 news_list = self.scrape_news_list()
                 logger.info(f"Scraped {len(news_list)} news items from the news list page.")
@@ -221,6 +224,16 @@ class SharesansarNewsScraper(BaseScraper):
                         continue
 
                     news_body, news_image, news_date = self.scrape_news_details(news_url)
+                    # Make naive datetimes timezone-aware
+                    if is_naive(news_date):
+                        scraped_date = make_aware(news_date)
+
+                    if latest_db_date and is_naive(latest_db_date):
+                        latest_db_date = make_aware(latest_db_date)
+
+                    if latest_db_date and scraped_date and scraped_date <= latest_db_date:
+                        self.stop_flag = True
+                        logger.info("Latest news in DB is newer than scraped data, stopping.")
                     news_record = {
                             "news_url": news_url,
                             "news_title": news["news_title"],
@@ -336,7 +349,7 @@ class SharesansarNewsScraper(BaseScraper):
             return False
 
 if __name__== "__main__":
-    news_scraper = SharesansarNewsScraper(headless=False, max_records=2)
+    news_scraper = SharesansarNewsScraper(headless=False, max_records=8)
     news_records = news_scraper.fetch_news()
     news_scraper.close()
     for record in news_records:

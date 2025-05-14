@@ -2,6 +2,7 @@ from datetime import datetime
 from stocks.models import CompanyProfile, PriceHistory, FloorSheet, CompanyNews
 from django.utils import timezone
 from dateutil.parser import parse as parse_datetime
+from django.db.models import Max
 import logging
 
 logger = logging.getLogger("stocks")
@@ -237,8 +238,25 @@ def store_news_to_db_ml(news_data):
             logger.error(f"Failed to save news: {record["title"]} | Error: {e}")
 
 def get_latest_news_date():
-    latest_news = CompanyNews.objects.order_by('-news_date').first()
-    return latest_news.news_date if latest_news else None
+    latest_news = (
+        CompanyNews.objects
+        .filter(news_url__icontains="merolagani")
+        .aggregate(latest_date=Max("news_date"))
+    )
+    return latest_news["latest_date"] if latest_news else None
+
+def get_latest_ss_news_date():
+    try:
+        latest_news = (
+            CompanyNews.objects
+            .filter(news_url__icontains="sharesansar")
+            .aggregate(latest_date=Max("news_date"))
+        )
+        return latest_news["latest_date"] if latest_news else None
+    except Exception as e:
+        logger.error(f"Failed to get latest news date: {e}")
+        return None
+
 
 def store_news_to_db_ss(news_data):
     for record in news_data:

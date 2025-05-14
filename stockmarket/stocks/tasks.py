@@ -1,6 +1,6 @@
 from celery import shared_task
-from .utility import save_price_history_to_db, save_price_history_to_db_ss, save_price_history_to_db_ml, store_floorsheet_to_db_ss, store_floorsheet_to_db_ml, store_news_to_db_ml
-from .scrapers.sharesansar_scraper import SharesansarPriceScraper, SharesansarFloorsheetScraper
+from .utility import save_price_history_to_db, save_price_history_to_db_ss, save_price_history_to_db_ml, store_floorsheet_to_db_ss, store_floorsheet_to_db_ml, store_news_to_db_ml, store_news_to_db_ss
+from .scrapers.sharesansar_scraper import SharesansarPriceScraper, SharesansarFloorsheetScraper, SharesansarNewsScraper
 from .scrapers.merolagani_scraper import MerolaganiScraper, MerolaganiFloorsheetScraper, MerolaganiNewsScraper
 from .scrapers.nepstock_scraper import scrape_company_price_history_nepstock, scrape_company_floorsheet_nepstock
 from .models import CompanyProfile
@@ -119,3 +119,21 @@ def run_merolagani_news_scraper(self):
     finally:
         if scraper:
             scraper.close()
+
+@shared_task(bind=True)
+def run_sharesansar_news_scraper(self):
+    logger.info("Celery Task Started: Sharesansar News Scraper")
+    try:
+        news_scraper = SharesansarNewsScraper(headless=True, max_records=2)
+        records = news_scraper.fetch_news()
+        logger.info(f"Celery: Fetched {len(records)} news items from listing page")
+        logger.info("Celery: News bodies extracted")
+
+        store_news_to_db_ss(records)
+        logger.info("Celery: News successfully stored to DB")
+    except Exception as e:
+        logger.exception("Celery: Error during Sharesansar news scraping task:")
+        raise self.retry(exc=e, countdown=60, max_retries=3)
+
+    finally:
+        news_scraper.close()

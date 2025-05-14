@@ -321,9 +321,8 @@ def empty_floorsheet(request, id):
     
 def scrape_news_ss(request):
     try:
-        news_scraper = sharesansar_scraper.SharesansarNewsScraper(headless=False, max_records=2)
+        news_scraper = sharesansar_scraper.SharesansarNewsScraper(headless=True, max_records=8)
         news_records = news_scraper.fetch_news()
-        news_scraper.close()
         store_news_to_db_ss(news_records)
     except Exception as e:
         logger.exception("Error while scraping Sharesansar news:")
