@@ -1,0 +1,56 @@
+{% extends 'base_generic.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h2 class="card-title text-center mb-4">Verify CAPTCHA</h2>
+                    
+                    <form method="post" action="/submit-captcha/">
+                        {% csrf_token %}
+                        
+                        {% if error %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            {{ error }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="text-center mb-4">
+                            <img src="data:image/png;base64,{{ captcha_img }}" class="img-fluid border rounded p-2 bg-light" alt="CAPTCHA Image" />
+                        </div>
+                        
+                        <input type="hidden" name="broker" value="{{ broker }}">
+                        
+                        <div class="mb-3">
+                            <label for="captchaInput" class="form-label">Enter CAPTCHA Text</label>
+                            <input type="text" class="form-control form-control-lg" id="captchaInput" 
+                                   name="captcha" required placeholder="Type the characters above">
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-box-arrow-in-right me-2"></i> Login
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 12px;
+    }
+    .form-control-lg {
+        font-size: 1.1rem;
+    }
+    img {
+        border: 1px solid #dee2e6;
+    }
+</style>
+{% endblock %}
