@@ -1,0 +1,12 @@
+<form method="post" action="/submit-captcha/">
+    {% csrf_token %}
+    {% if error %}
+      <p style="color: red;">{{ error }}</p>
+    {% endif %}
+    <img src="data:image/png;base64,{{ captcha_img }}" /><br>
+    <input type="hidden" name="broker" value="{{ broker }}">
+    <label>Captcha:</label>
+    <input type="text" name="captcha" required>
+    <button type="submit">Login</button>
+  </form>
+  
