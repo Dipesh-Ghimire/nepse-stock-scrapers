@@ -15,4 +15,4 @@ class TMSLoginForm(forms.Form):
 
     price = forms.DecimalField(label="Target Price", max_digits=10, decimal_places=1, required=True, min_value=1)
     quantity = forms.IntegerField(label="Quantity" , min_value=10, required=True)
-    price_threshold = forms.DecimalField(label="Price Threshold", max_digits=10, decimal_places=1, required=False, min_value=1)
+    price_threshold = forms.DecimalField(label="Price Threshold", max_digits=10, decimal_places=1, required=True, min_value=1)

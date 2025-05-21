@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .forms import TMSLoginForm
 from .selenium_client import SeleniumTMSClient
 import logging
-logger = logging.getLogger("tms")
+logger = logging.getLogger("stocks")
 
 # TEMPORARY session cache (not production-safe)
 session_cache = {}
@@ -63,10 +63,12 @@ def submit_captcha(request):
         client.submit_login(captcha_text)
         if client.login_successful():
             dashboard_data = client.scrape_dashboard_stats()
+            collateral_data = client.scrape_collateral()
             # html_table = client.get_market_depth_html(instrument_type="EQ", script_name="MEN")
             client.go_to_place_order(script_name=order_data['script_name'],transaction=order_data['transaction_type'])
+            client.execute_trade(script_name=order_data['script_name'],price=order_data['price'], quantity=order_data['quantity'], transaction=order_data['transaction_type'])
             client.close()
-            return render(request, "tms/login_success.html", dashboard_data)
+            return render(request, "tms/login_success.html", {"dashboard_data": dashboard_data, "collateral_data": collateral_data})
             # return render(request, "tms/market_depth.html", {"table_html": html_table})
 
 
