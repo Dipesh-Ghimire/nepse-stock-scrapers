@@ -1,0 +1,17 @@
+{% extends 'base_generic.html' %}
+
+{% block content %}
+
+  <h3>📊 TMS Summary</h3>
+  <ul>
+    <li><strong>Total Turnover:</strong> {{ dashboard_data.turnover }}</li>
+    <li><strong>Total Traded Shares:</strong> {{ dashboard_data.traded_shares }}</li>
+    <li><strong>Total Transactions:</strong> {{ dashboard_data.transactions }}</li>
+    <li><strong>Total Scrips Traded:</strong> {{ dashboard_data.scrips }}</li>
+    <li><strong>Utilized Collateral:</strong> {{ collateral_data.collateral_utilized }}</li>
+    <li><strong>Available Collateral:</strong> {{ collateral_data.collateral_available }}</li>
+  </ul>
+
+  <p>You are now logged in to NEPSE TMS.</p>
+
+{% endblock %}
