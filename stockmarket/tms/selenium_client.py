@@ -9,7 +9,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 import time
 import logging
-logger = logging.getLogger("tms")
+logger = logging.getLogger("stocks")
 
 class SeleniumTMSClient:
     def __init__(self, broker_number, headless=False):
@@ -70,7 +70,7 @@ class SeleniumTMSClient:
             # Wait until the card with the header "Market Summary" is visible
             market_summary_card = wait.until(
                 EC.presence_of_element_located(
-                    (By.XPATH, "//div[@class='card-title h5' and text()='Market Summary']/ancestor::div[contains(@class, 'card')]")
+                    (By.XPATH, "//div[contains(@class, 'card-title') and normalize-space(text())='Market Summary']/ancestor::div[contains(@class, 'card')]")
                 )
             )
 
@@ -86,13 +86,269 @@ class SeleniumTMSClient:
                 data["transactions"] = figures[1].find_element(By.CLASS_NAME, "figure-value").text.strip()
                 data["scrips"] = figures[2].find_element(By.CLASS_NAME, "figure-value").text.strip()
             else:
-                print("⚠️ Not enough figure elements found.")
+                logger.info("⚠️ Not enough figure elements found.")
 
         except Exception as e:
-            print("Error scraping dashboard:", e)
+            logger.info("Error scraping dashboard: %s", e)
             self.driver.save_screenshot("scrape_error.png")  # Help debug
 
         return data
+
+    def scrape_collateral(self):
+        data = {
+            "collateral_utilized": "",
+            "collateral_available": ""
+        }
+
+        try:
+            wait = WebDriverWait(self.driver, 15)
+
+            # Wait until the "Collateral Utilized" label is present
+            utilized_value_elem = wait.until(
+                EC.presence_of_element_located((
+                    By.XPATH,
+                    "//span[contains(text(), 'Collateral Utilized')]/following-sibling::span"
+                ))
+            )
+            data["collateral_utilized"] = utilized_value_elem.text.strip()
+
+            # Wait until the "Collateral Available" label is present
+            available_value_elem = wait.until(
+                EC.presence_of_element_located((
+                    By.XPATH,
+                    "//a[@id='collateralView']//following-sibling::span"
+                ))
+            )
+            data["collateral_available"] = available_value_elem.text.strip()
+
+        except Exception as e:
+            logger.info("Error scraping collateral data: %s", e)
+            self.driver.save_screenshot("scrape_collateral_error.png")
+
+        return data
+
+    def execute_trade(self, script_name: str, transaction: Literal['Buy', 'Sell'], quantity: int, price: float):
+        try:
+            self.enter_trade_details(quantity, price)
+
+            # Extract LTP
+            ltp = self.extract_ltp()
+            logger.info(f"Trade executing: {transaction} {script_name} at :{ltp}:")
+
+
+            if transaction == 'Buy':
+                self.click_buy_button()
+            else:
+                self.click_sell_button()
+
+            # Wait briefly for the toast to appear
+            wait = WebDriverWait(self.driver, 0.1)
+            toast = wait.until(EC.presence_of_element_located(
+                (By.CSS_SELECTOR, "div.toast-text.ng-star-inserted"))
+            )
+
+            # Extract toast title and message
+            toast_title = toast.find_element(By.CSS_SELECTOR, "span.toast-title").text.strip()
+            toast_msg = toast.find_element(By.CSS_SELECTOR, "span.toast-msg").text.strip()
+
+            msg = self.wait_for_toast()
+            if "Success" in msg:
+                print("Trade executed successfully.")
+            elif "INVALID_ORDER_QUANTITY" in msg or "Invalid quantity" in msg:
+                print("Trade failed: Invalid quantity.")
+            elif "Price should be within valid range" in msg:
+                print("Trade failed: Price out of allowed range.")
+            else:
+                print("⚠️ Unknown toast message:", msg)
+
+        except Exception as e:
+            logger.info("Error executing trade: %s", e)
+            self.driver.save_screenshot("trade_execution_error.png")
+
+    def enter_trade_details(self, quantity, price):
+        try:
+            wait = WebDriverWait(self.driver, 10)
+
+            # Wait for and enter Quantity
+            qty_input = wait.until(
+                EC.presence_of_element_located((By.XPATH, "//input[@formcontrolname='quantity']"))
+            )
+            qty_input.clear()
+            qty_input.send_keys(str(quantity))
+
+            # Wait for and enter Price
+            price_input = wait.until(
+                EC.presence_of_element_located((By.XPATH, "//input[@formcontrolname='price']"))
+            )
+            price_input.clear()
+            price_input.send_keys(str(price))
+            logger.info(f"Entered trade details: Quantity={quantity}, Price={price}")
+
+        except Exception as e:
+            logger.info("Error entering trade details: %s", e)
+            self.driver.save_screenshot("enter_trade_error.png")
+    
+    def extract_stock_data(self):
+        data = {
+            "ltp": "",
+            "change": "",
+            "low": "",
+            "high": "",
+            "open": "",
+            "day_high": "",
+            "day_low": "",
+            "avg_price": "",
+            "pre_close": "",
+            "52w_high": "",
+            "52w_low": ""
+        }
+
+        try:
+            wait = WebDriverWait(self.driver, 10)
+
+            # Get all 'order__form--prodtype' containers
+            elements = wait.until(
+                EC.presence_of_all_elements_located((By.CLASS_NAME, "order__form--prodtype"))
+            )
+
+            for el in elements:
+                label = el.find_element(By.CLASS_NAME, "order__form--label").text.strip()
+                value = ""
+
+                # LTP is not inside a <b> or <span>, it’s a direct text node — extract manually
+                if label == "LTP":
+                    full_text = el.text.strip()
+                    value = full_text.split("\n")[1].strip() if "\n" in full_text else full_text.replace("LTP", "").strip()
+                    change_elem = el.find_elements(By.CLASS_NAME, "change-price")
+                    data["change"] = change_elem[0].text.strip() if change_elem else ""
+                    data["ltp"] = value
+
+                else:
+                    # For all others, the value is inside <b>
+                    try:
+                        value = el.find_element(By.TAG_NAME, "b").text.strip()
+                    except:
+                        value = ""
+
+                    # Map label to the corresponding key
+                    mapping = {
+                        "Low": "low",
+                        "High": "high",
+                        "Open": "open",
+                        "D High": "day_high",
+                        "D Low": "day_low",
+                        "Avg Price": "avg_price",
+                        "Pre Close": "pre_close",
+                        "52W High": "52w_high",
+                        "52W Low": "52w_low"
+                    }
+
+                    if label in mapping:
+                        data[mapping[label]] = value
+
+        except Exception as e:
+            logger.info("Error extracting stock data: %s", e)
+            self.driver.save_screenshot("stock_data_error.png")
+
+        return data
+
+    def extract_ltp(self) -> float:
+        raw_ltp =  self.extract_stock_data().get("ltp", "").replace(",", "")
+        # raw ltp = '723 (2.3)'
+        # Extract only the numeric part
+        ltp = raw_ltp.split(" ")[0] if raw_ltp else "0"
+        return float(ltp)
+
+    def extract_market_depth(self):
+        market_depth = {
+            "buy": [],   # List of dicts: [{"order": ..., "qty": ..., "price": ...}]
+            "sell": []   # List of dicts: [{"price": ..., "qty": ..., "order": ...}]
+        }
+
+        try:
+            wait = WebDriverWait(self.driver, 10)
+
+            # Get all tables (Top 5 Buy is first, Top 5 Sell is second)
+            tables = wait.until(
+                EC.presence_of_all_elements_located((By.CSS_SELECTOR, "table.table--data"))
+            )
+
+            # --- Extract Buy Side ---
+            buy_rows = tables[0].find_elements(By.CSS_SELECTOR, "tbody tr.text-buy")
+            for row in buy_rows:
+                cols = row.find_elements(By.CLASS_NAME, "text-center")
+                if len(cols) == 3:
+                    market_depth["buy"].append({
+                        "order": cols[0].text.strip(),
+                        "qty": cols[1].text.strip(),
+                        "price": cols[2].text.strip()
+                    })
+
+            # --- Extract Sell Side ---
+            sell_rows = tables[1].find_elements(By.CSS_SELECTOR, "tbody tr.text-sell")
+            for row in sell_rows:
+                cols = row.find_elements(By.CLASS_NAME, "text-center")
+                if len(cols) == 3:
+                    market_depth["sell"].append({
+                        "price": cols[0].text.strip(),
+                        "qty": cols[1].text.strip(),
+                        "order": cols[2].text.strip()
+                    })
+
+        except Exception as e:
+            logger.info("Error extracting market depth: %s", e)
+            self.driver.save_screenshot("market_depth_error.png")
+
+        return market_depth
+
+    def click_buy_button(self):
+        try:
+            wait = WebDriverWait(self.driver, 10)
+
+            # Locate the BUY button (with both "btn-primary" and text "BUY")
+            buy_button = wait.until(
+                EC.element_to_be_clickable((
+                    By.XPATH, "//button[contains(@class, 'btn-primary') and normalize-space(text())='BUY']"
+                ))
+            )
+
+            buy_button.click()
+            logger.info("BUY button clicked successfully.")
+
+        except Exception as e:
+            logger.info("Failed to click BUY button: %s", e)
+            self.driver.save_screenshot("buy_button_error.png")
+
+    def click_sell_button(self):
+        try:
+            sell_button = self.driver.find_element(By.XPATH, "//button[contains(text(), 'SELL')]")
+            sell_button.click()
+            logger.info("Sell button clicked.")
+        except Exception as e:
+            logger.info("Error clicking sell button: %s", e)
+            self.driver.save_screenshot("click_sell_error.png")
+
+    def wait_for_toast(self, timeout=10) -> str:
+        try:
+            wait = WebDriverWait(self.driver, timeout)
+            toast_container = wait.until(EC.presence_of_element_located((By.ID, "toasty")))
+
+            # Wait for any visible toast inside the container
+            toast = toast_container.find_element(By.CLASS_NAME, "toast-text")
+            title = toast.find_element(By.CLASS_NAME, "toast-title").text
+            message = toast.find_element(By.CLASS_NAME, "toast-msg").text
+
+            full_message = f"{title}: {message}"
+            print("🔔 Toast:", full_message)
+            return full_message
+
+        except TimeoutException:
+            print("⏰ Toast message did not appear in time.")
+            return "Timeout"
+
+        except Exception as e:
+            print(f"❌ Error while parsing toast: {e}")
+            return "Error"
 
     def go_to_market_depth(self):
         try:
@@ -110,12 +366,12 @@ class SeleniumTMSClient:
             ))
             market_depth_link.click()
 
-            print("✅ Navigated to Market Depth")
+            logger.info("✅ Navigated to Market Depth")
 
             return True
 
         except TimeoutException:
-            print("❌ Could not navigate to Market Depth")
+            logger.info("❌ Could not navigate to Market Depth")
             self.driver.save_screenshot("market_depth_error.png")
             return False
 
@@ -132,7 +388,7 @@ class SeleniumTMSClient:
             ))
             select = Select(instrument_dropdown)
             select.select_by_visible_text(instrument_type.upper())
-            print(f"✅ Selected Instrument Type: {instrument_type}")
+            logger.info(f"✅ Selected Instrument Type: {instrument_type}")
 
             time.sleep(2)  # allow scripts to reload based on instrument
 
@@ -146,18 +402,18 @@ class SeleniumTMSClient:
             time.sleep(2)  # wait for dropdown options to appear
 
             search_input.send_keys(Keys.ENTER)  # select top option
-            print(f"✅ Selected Script: {script_name}")
+            logger.info(f"✅ Selected Script: {script_name}")
 
             # Step 4: Wait for market depth table to load
             table = wait.until(EC.presence_of_element_located(
                 (By.CSS_SELECTOR, "table.market__depth__general-info"))
             )
-            print("✅ Market depth table loaded")
+            logger.info("✅ Market depth table loaded")
 
             return table.get_attribute("outerHTML")
 
         except TimeoutException as e:
-            print("❌ Failed to load market depth")
+            logger.info("❌ Failed to load market depth")
             self.driver.save_screenshot("market_depth_failed.png")
             return "<p>Error: Could not retrieve market depth</p>"
 
@@ -169,6 +425,6 @@ class SeleniumTMSClient:
             self.driver.get(self.order_url)
             time.sleep(2)
         except Exception as e:
-            print(f"Failed to navigate to place order page: {e}")
+            logger.info(f"Failed to navigate to place order page: {e}")
             self.driver.save_screenshot("place_order_failed.png")
             return False
