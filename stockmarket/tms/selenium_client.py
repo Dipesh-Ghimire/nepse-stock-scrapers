@@ -19,6 +19,7 @@ class SeleniumTMSClient:
         self.driver = self._init_driver(headless)
         self.login_url = f"https://tms{self.broker_number}.nepsetms.com.np/login"
         self.order_url = f"https://tms{self.broker_number}.nepsetms.com.np/tms/me/memberclientorderentry"
+        self.order_entry_visited = False
 
     def _init_driver(self, headless):
         options = Options()
@@ -141,25 +142,25 @@ class SeleniumTMSClient:
             else:
                 self.click_sell_button()
 
-            # Wait briefly for the toast to appear
-            wait = WebDriverWait(self.driver, 0.1)
-            toast = wait.until(EC.presence_of_element_located(
-                (By.CSS_SELECTOR, "div.toast-text.ng-star-inserted"))
-            )
+            # # Wait briefly for the toast to appear
+            # wait = WebDriverWait(self.driver, 0.5)
+            # toast = wait.until(EC.presence_of_element_located(
+            #     (By.CSS_SELECTOR, "div.toast-text.ng-star-inserted"))
+            # )
 
-            # Extract toast title and message
-            toast_title = toast.find_element(By.CSS_SELECTOR, "span.toast-title").text.strip()
-            toast_msg = toast.find_element(By.CSS_SELECTOR, "span.toast-msg").text.strip()
+            # # Extract toast title and message
+            # toast_title = toast.find_element(By.CSS_SELECTOR, "span.toast-title").text.strip()
+            # toast_msg = toast.find_element(By.CSS_SELECTOR, "span.toast-msg").text.strip()
 
-            msg = self.wait_for_toast()
-            if "Success" in msg:
-                print("Trade executed successfully.")
-            elif "INVALID_ORDER_QUANTITY" in msg or "Invalid quantity" in msg:
-                print("Trade failed: Invalid quantity.")
-            elif "Price should be within valid range" in msg:
-                print("Trade failed: Price out of allowed range.")
-            else:
-                print("⚠️ Unknown toast message:", msg)
+            # msg = self.wait_for_toast()
+            # if "Success" in msg:
+            #     print("Trade executed successfully.")
+            # elif "INVALID_ORDER_QUANTITY" in msg or "Invalid quantity" in msg:
+            #     print("Trade failed: Invalid quantity.")
+            # elif "Price should be within valid range" in msg:
+            #     print("Trade failed: Price out of allowed range.")
+            # else:
+            #     print("⚠️ Unknown toast message:", msg)
 
         except Exception as e:
             logger.info("Error executing trade: %s", e)
@@ -428,3 +429,90 @@ class SeleniumTMSClient:
             logger.info(f"Failed to navigate to place order page: {e}")
             self.driver.save_screenshot("place_order_failed.png")
             return False
+
+    def go_to_order_entry(self):
+        try:
+            self.driver.get(self.order_url)
+            time.sleep(2)
+        except Exception as e:
+            logger.info(f"Failed to navigate to order entry page: {e}")
+            self.driver.save_screenshot("order_entry_failed.png")
+            return False
+
+    def scrape_multiple_stocks(self, symbols=None):
+        """
+        Scrapes market depth data for multiple symbols.
+        """
+        if symbols is None:
+            symbols = ["NABIL", "NICA" , "GBIME", "HIDCL", "NLIC"]
+            # symbols = ["NABIL", "NICA", "NRIC", "NEPSE", "GBIME", "KBL", "PCBL", "NLIC", "HIDCL", "SHIVM"]
+        data = {}
+        for symbol in symbols:
+            data[symbol] = self.scrape_top_depth_for_symbol(symbol)
+            time.sleep(0.5)
+
+        return data
+    
+    def scrape_top_depth_for_symbol(self, symbol_name):
+        """
+        Scrapes top buyer and seller for a given stock symbol.
+        """
+        try:
+            # Clear and enter symbol
+            symbol_input = WebDriverWait(self.driver, 15).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "input[formcontrolname='symbol']"))
+            )
+            symbol_input.clear()
+            symbol_input.send_keys(symbol_name)
+            time.sleep(1)  # Increased delay
+            symbol_input.send_keys(Keys.ENTER)
+            time.sleep(2)  # Wait for data to load
+
+
+            # Initialize empty result
+            result = {
+                "top_buyer": {"price": None, "quantity": None},
+                "top_seller": {"price": None, "quantity": None},
+                "error": None
+            }
+
+            # Try alternative selectors
+            try:
+                # Wait for the entire depth section to load
+                depth_section = WebDriverWait(self.driver, 15).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.col-md-5.col-sm-12"))
+                )
+                
+                # Try more generic selector for buy rows
+                buy_rows = depth_section.find_elements(By.CSS_SELECTOR, "tr.text-buy")
+                if not buy_rows:
+                    buy_rows = depth_section.find_elements(By.XPATH, ".//tr[contains(@class, 'text-buy')]")
+                
+                if buy_rows:
+                    cells = buy_rows[0].find_elements(By.TAG_NAME, "td")
+                    if len(cells) >= 3:
+                        result["top_buyer"]["quantity"] = int(cells[1].text.strip())
+                        result["top_buyer"]["price"] = float(cells[2].text.strip())
+
+                # Try more generic selector for sell rows
+                sell_rows = depth_section.find_elements(By.CSS_SELECTOR, "tr.text-sell")
+                if not sell_rows:
+                    sell_rows = depth_section.find_elements(By.XPATH, ".//tr[contains(@class, 'text-sell')]")
+                
+                if sell_rows:
+                    cells = sell_rows[0].find_elements(By.TAG_NAME, "td")
+                    if len(cells) >= 2:
+                        result["top_seller"]["price"] = float(cells[0].text.strip())
+                        result["top_seller"]["quantity"] = int(cells[1].text.strip())
+
+            except Exception as e:
+                result["error"] = f"Scraping error: {str(e)}"
+                logger.error(f"Scraping error for {symbol_name}: {str(e)}")
+
+            logger.info(f"Scraped data for {symbol_name}: {result}")
+            return result
+
+        except Exception as e:
+            error_msg = f"Failed for {symbol_name}: {str(e)}"
+            logger.error(error_msg)
+            return {"error": error_msg}
